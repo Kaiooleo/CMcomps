@@ -602,6 +602,13 @@
         );
       }),
     );
+    card
+      .querySelectorAll("[data-lb]")
+      .forEach((sel) =>
+        sel.addEventListener("change", () =>
+          change(() => (t.lb[+sel.dataset.lb] = L.lbValue(sel.value)), false),
+        ),
+      );
     card.querySelectorAll("[data-d]").forEach((b) =>
       b.addEventListener("click", () => {
         const j = +b.dataset.d;
@@ -623,10 +630,12 @@
         `${PAR[j]}: ${t.p[j] || "empty"}`,
         PAR[j],
       );
+    const lbSelect = (j) =>
+      `<select class="lb" data-lb="${j}" aria-label="Limit break da carta ${j + 1}"><option value="">LB —</option>${L.LB_LABELS.map((x, n) => `<option value="${n}" ${t.lb[j] === n ? "selected" : ""}>${x}</option>`).join("")}</select>`;
     const deck = t.d
       .map((c, j) => {
         const borrowed = j === L.BORROWED_SLOT;
-        return slot(
+        const card = slot(
           borrowed ? "borrow" : "",
           c ? cardImg(c) : "",
           `data-d="${j}"`,
@@ -634,6 +643,7 @@
           borrowed ? "" : "+",
           borrowed ? '<span class="tag">BORROW</span>' : "",
         );
+        return `<div class="dcell">${card}${big ? lbSelect(j) : ""}</div>`;
       })
       .join("");
     return `<article class="panel runner ${big ? "big" : ""} ${t.ro === "Debuffer" ? "debuff" : ""}" data-k="${k}">

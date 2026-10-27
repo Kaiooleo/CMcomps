@@ -221,6 +221,7 @@
         w: null,
         p: Array(SLOTS).fill(null),
         d: Array(SLOTS).fill(null),
+        lb: Array(SLOTS).fill(null), // limit break de cada carta: 0–4 (4 = MLB) ou null
       })),
       rat: Array(ROUNDS).fill(""),
       pl: "",
@@ -233,7 +234,14 @@
       Array.isArray(arr) && arr[i] != null ? map(arr[i]) : fill,
     );
 
-  /** Garante que um PvP salvo tenha sempre 3 Umas, 6 pais, 6 cartas e 4 rodadas, com tipos corretos. */
+  /** Limit break válido: 0 a 4 (4 = MLB); qualquer outra coisa vira null. */
+  const LB_LABELS = ["0LB", "1LB", "2LB", "3LB", "MLB"];
+  function lbValue(v) {
+    const n = parseInt(v, 10);
+    return n >= 0 && n <= 4 ? n : null;
+  }
+
+  /** Garante que um PvP salvo tenha sempre 3 Umas, 6 pais, 6 cartas (com limit break) e 4 dias de round, com tipos corretos. */
   function normalizeRecord(r) {
     const base = blankRecord();
     if (!r || typeof r !== "object") return base;
@@ -249,6 +257,7 @@
         w: isNaN(w) ? null : w,
         p: fit(t.p, SLOTS, null, str),
         d: fit(t.d, SLOTS, null, str),
+        lb: fit(t.lb, SLOTS, null, lbValue),
       };
     });
     return base;
@@ -293,7 +302,8 @@
           !t.st &&
           t.ro === "Ace" &&
           t.p.every((x) => !x) &&
-          t.d.every((x) => !x),
+          t.d.every((x) => !x) &&
+          t.lb.every((x) => x == null),
       )
     );
   }
@@ -329,6 +339,8 @@
     SCHEMA,
     BORROWED_SLOT,
     WINS_TOTAL,
+    LB_LABELS,
+    lbValue,
     MARGIN_DAYS,
     CADENCE_DAYS,
     addDays,

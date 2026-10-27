@@ -288,3 +288,16 @@ test("Current PvP pode ser forçado manualmente", () => {
     "CM21",
   );
 });
+
+test("limit break: 0 a 4 (MLB); dados antigos sem LB continuam válidos", () => {
+  assert.equal(L.lbValue("0"), 0);
+  assert.equal(L.lbValue("4"), 4);
+  assert.equal(L.lbValue(""), null);
+  assert.equal(L.lbValue("5"), null);
+  assert.equal(L.LB_LABELS[4], "MLB");
+  const old = L.migrate({ CM1: { team: [{ n: "Oguri Cap", d: ["A"] }] } });
+  assert.deepEqual(old.CM1.team[0].lb, [null, null, null, null, null, null]);
+  const rec = L.blankRecord();
+  rec.team[0].lb[2] = 3;
+  assert.ok(!L.isEmptyRecord(rec), "LB preenchido conta como dado salvo");
+});

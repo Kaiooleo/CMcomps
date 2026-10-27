@@ -1594,3 +1594,23 @@ img.spr {
 .runner.big .affinity {
   min-height: 120px;
 }
+
+/* ---------- página da Uma: campos do tamanho da arte e limit break ---------- */
+.runner.big .rtop > div {
+  max-width: 320px;
+}
+.dcell {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.dcell select.lb {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 6px;
+  padding: 3px 4px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
