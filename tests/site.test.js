@@ -60,7 +60,17 @@ test("abre sem erros e mostra o Current CM e a lista de PvPs", async () => {
   const { context, page, errors } = await openPage();
   await page.goto(base);
   await page.waitForSelector(".curhero");
-  assert.match(await page.textContent(".curhero"), /Current CM/);
+  assert.match(await page.textContent(".curhero"), /Current PvP/);
+  for (const id of ["rank-aces", "rank-cards", "rank-borrowed"]) {
+    await page.goto(base + "#" + id);
+    await page.waitForSelector(".lhead h1");
+    assert.equal(
+      await page.isHidden("#back"),
+      false,
+      "seta de voltar na lista completa",
+    );
+  }
+  await page.goto(base);
   await page.click("#nav-cms");
   await page.waitForSelector(".tile");
   assert.ok((await page.locator(".tile").count()) > 50);

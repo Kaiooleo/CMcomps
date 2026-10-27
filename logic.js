@@ -66,9 +66,9 @@
   }
 
   /**
-   * Em que fase um PvP está em relação ao Current CM:
+   * Em que fase um PvP está em relação ao Current PvP:
    * "past" (antes dele), "current" (é ele) ou "future" (depois dele).
-   * Sem Current CM definido, tudo é "past".
+   * Sem Current PvP definido, tudo é "past".
    */
   function phase(cms, conf, id) {
     const ids = cms.map((c) => c.id);
@@ -130,9 +130,10 @@
       tot,
       wr: tot ? pl["1st"] / tot : 0,
       styles,
-      aces: top(aces, Infinity), // todas as Aces usadas, da mais para a menos usada
-      cards: top(cards, 5),
-      borrow: top(borrow, 5),
+      // listas completas, da mais para a menos usada (o Resumo mostra o top 5)
+      aces: top(aces, Infinity),
+      cards: top(cards, Infinity),
+      borrow: top(borrow, Infinity),
       scores,
       best: sorted[0],
       worst: sorted[sorted.length - 1],

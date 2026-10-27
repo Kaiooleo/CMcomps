@@ -6,7 +6,7 @@ Site para montar e acompanhar times de Champions Meeting e League of Heroes de U
 
 - Cada pessoa salva os próprios times **no navegador**. O rodapé tem **Baixar backup** e **Carregar backup** para levar os dados para outro aparelho.
 - Dá para **instalar como app** no celular ou computador (o navegador oferece "Instalar" / "Adicionar à tela inicial"), e ele abre mesmo sem internet.
-- O **Current CM** e a data da final ficam em `data.js` (`window.CM_CONFIG`). PvPs depois dele não entram nas estatísticas, e ele mesmo só entra depois da final.
+- O **Current PvP** e a data da final ficam em `data.js` (`window.CM_CONFIG`). PvPs depois dele não entram nas estatísticas, e ele mesmo só entra depois da final.
 
 ## Arquivos
 
@@ -16,7 +16,7 @@ Site para montar e acompanhar times de Champions Meeting e League of Heroes de U
 | `style.css`            | Visual (cores, layout, tema claro/escuro)                                         |
 | `logic.js`             | Regras e cálculos: WR, o que conta, estatísticas, formato dos dados e backup      |
 | `app.js`               | Telas e interação: Resumo, lista de PvPs, página do PvP, seletor, salvar e backup |
-| `data.js`              | Current CM, PvPs, personagens e cartas (não formatado de propósito)               |
+| `data.js`              | Current PvP, PvPs, personagens e cartas (não formatado de propósito)              |
 | `sp/`                  | Imagens das Umas e cartas agrupadas em folhas                                     |
 | `sw.js`                | Service worker: permite instalar e abrir sem internet                             |
 | `manifest.webmanifest` | Nome, cores e ícones do app instalado                                             |

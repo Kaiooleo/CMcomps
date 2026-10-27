@@ -55,7 +55,7 @@
     s.classList.toggle("err", isError);
   };
 
-  /* ---------- Current CM (definido em data.js) ---------- */
+  /* ---------- Current PvP (definido em data.js) ---------- */
   const phase = (id) => L.phase(CAT.cms, CONF, id);
   const counted = (id) => L.counted(CAT.cms, CONF, id);
   const finalPassed = () => L.finalPassed(CONF);
@@ -146,7 +146,7 @@
 
   /* ---------- navegação ---------- */
   function setNav(tab) {
-    $("#back").hidden = !location.hash.startsWith("#cm-");
+    $("#back").hidden = !/^#(cm|rank)-/.test(location.hash);
     for (const id of ["resumo", "cms"])
       $("#nav-" + id).toggleAttribute("aria-current", id === tab);
     $("#nav-" + tab).setAttribute("aria-current", "page");
@@ -156,6 +156,7 @@
     if (h.startsWith("cm-") && CM_BY_ID.has(h.slice(3)))
       return viewCM(h.slice(3));
     if (h === "cms") return viewList();
+    if (RANKINGS[h]) return viewRanking(h);
     return viewResumo();
   }
 
@@ -182,12 +183,11 @@
       : `<a class="btn primary" href="#cm-${esc(cm.id)}" style="align-self:center;justify-self:start">Montar time</a>`;
     return `<section class="curhero">
     <a class="ch-main" href="#cm-${esc(cm.id)}">
-      <div class="label" style="color:var(--accent)">Current CM</div>
+      <div class="label" style="color:var(--accent)">Current PvP</div>
       <h1><span class="cmid ${isLoh(cm.id) ? "loh" : ""}">${esc(cm.id)}</span> <span class="sc">· ${esc(cm.sc)}</span></h1>
       <div class="ln num">${esc(cm.tr)} · ${cm.m || "?"}m · ${esc(cm.su)} · ${esc(L.dist(cm.m))}${cm.dir ? " · " + esc(cm.dir) : ""}</div>
       ${cond(cm) ? `<div class="ln">${cond(cm)}</div>` : ""}
       <div class="when"><span class="chip cur">${when}</span>${d && d.pl ? ` <span class="chip ${plClass(d.pl)}">${esc(d.pl)}</span>` : ""}</div>
-      <p class="note">${passed ? "Já conta nas estatísticas." : "Este CM e os seguintes ficam fora das estatísticas até a final."}</p>
     </a>
     <div class="ch-team">${teamHtml}</div>
   </section>`;
@@ -222,9 +222,53 @@
     return s + '</svg><div class="tip" hidden></div>';
   }
 
-  function podium(entries, borrowed) {
+  /* ---------- rankings (top 5 no Resumo, lista completa em página própria) ---------- */
+  const TOP = 5;
+  const RANKINGS = {
+    "rank-aces": { title: "Umas (Ace)", key: "aces" },
+    "rank-cards": { title: "Most Used Cards", key: "cards" },
+    "rank-borrowed": {
+      title: "Most Borrowed Cards",
+      key: "borrow",
+      pink: true,
+    },
+  };
+
+  function panelHead(id, total) {
+    const r = RANKINGS[id];
+    const more =
+      total > TOP
+        ? `<a class="more" href="#${id}">Ver todas (${total}) →</a>`
+        : "";
+    return `<div class="phead"><div class="label"${r.pink ? ' style="color:var(--pink)"' : ""}>${r.title}</div>${more}</div>`;
+  }
+
+  function aceGrid(entries, start = 0) {
+    return `<div class="aces">${entries
+      .map(
+        ([k, n], i) =>
+          `<div class="ace"><span class="av">${charImg(k, true)}<b class="num">${n}</b>${start ? `<i class="rk">${start + i}</i>` : ""}</span><span>${esc(k)}</span></div>`,
+      )
+      .join("")}</div>`;
+  }
+
+  function viewRanking(id) {
+    setNav("resumo");
+    const r = RANKINGS[id];
+    const list = L.computeStats(CAT.cms, DATA, counted)[r.key];
+    const body = !list.length
+      ? '<p class="empty">Nada registrado ainda.</p>'
+      : r.key === "aces"
+        ? aceGrid(list, 1)
+        : podium(list, r.key === "borrow", true);
+    $("#app").innerHTML = `
+  <section class="lhead"><h1${r.pink ? ' style="color:var(--pink)"' : ""}>${r.title}</h1><span class="chip">${list.length}</span></section>
+  <section class="panel">${body}</section>`;
+  }
+
+  function podium(entries, borrowed, wrap = false) {
     if (!entries.length) return '<p class="empty">Nada registrado ainda.</p>';
-    return `<div class="podium">${entries
+    return `<div class="podium${wrap ? " wrap" : ""}">${entries
       .map(([k, n], i) => {
         const c = CARD.get(k);
         return `<div class="pc ${borrowed ? "borrow" : ""}"><div class="art">${cardImg(k)}<span class="rk">${i + 1}</span><span class="ct num">${n}×</span></div><div class="nm">${esc(c ? c.n : k.split("\n")[0])}${c ? `<small>${esc(c.t)}</small>` : ""}</div></div>`;
@@ -256,8 +300,8 @@
     </div>
   </section>
   <section class="row2">
-    <div class="panel"><div class="label">Umas (Ace)</div>
-      ${s.aces.length ? `<div class="aces">${s.aces.map(([k, n]) => `<div class="ace"><span class="av">${charImg(k, true)}<b class="num">${n}</b></span><span>${esc(k)}</span></div>`).join("")}</div>` : '<p class="empty">Nada registrado ainda.</p>'}
+    <div class="panel">${panelHead("rank-aces", s.aces.length)}
+      ${s.aces.length ? aceGrid(s.aces.slice(0, TOP)) : '<p class="empty">Nada registrado ainda.</p>'}
     </div>
     <div class="panel"><div class="label">Style (Ace)</div>
       <div class="bars">${STYLES.map((st) => {
@@ -266,8 +310,8 @@
       }).join("")}</div>
     </div>
   </section>
-  <section class="panel"><div class="label">Most Used Cards</div>${podium(s.cards, false)}</section>
-  <section class="panel"><div class="label" style="color:var(--pink)">Most Borrowed Cards</div>${podium(s.borrow, true)}</section>`;
+  <section class="panel">${panelHead("rank-cards", s.cards.length)}${podium(s.cards.slice(0, TOP), false)}</section>
+  <section class="panel">${panelHead("rank-borrowed", s.borrow.length)}${podium(s.borrow.slice(0, TOP), true)}</section>`;
 
     const chart = $("#chart");
     const tip = chart && chart.querySelector(".tip");
@@ -299,7 +343,7 @@
     const title = c.nm && c.nm !== "League of Heroes" ? c.nm : c.sc;
     let chips = "";
     if (ph === "current")
-      chips += `<span class="chip cur">Current${CONF.date ? " · final " + fmtDate(CONF.date).slice(0, 5) : ""}</span>`;
+      chips += `<span class="chip cur">Current PvP${CONF.date ? " · final " + fmtDate(CONF.date).slice(0, 5) : ""}</span>`;
     if (ph === "future") chips += '<span class="chip none">Not counted</span>';
     if (d && d.pl)
       chips += `<span class="chip ${plClass(d.pl)}">${esc(d.pl)}</span>`;
@@ -362,9 +406,9 @@
   function currentNote(id) {
     const ph = phase(id);
     if (ph === "current")
-      return `<div class="banner sched"><p><b>Current CM.</b> ${finalPassed() ? "A final já passou e ele já conta nas estatísticas." : `Entra nas estatísticas depois da final${CONF.date ? ` (${fmtDate(CONF.date)})` : ""}.`}</p></div>`;
+      return `<div class="banner sched"><p><b>Current PvP.</b> ${finalPassed() ? "A final já passou e ele já conta nas estatísticas." : `Entra nas estatísticas depois da final${CONF.date ? ` (${fmtDate(CONF.date)})` : ""}.`}</p></div>`;
     if (ph === "future")
-      return `<div class="banner sched"><p>Este PvP vem depois do Current CM (${esc(CONF.cur)}), então o que você montar aqui ainda não conta nas estatísticas.</p></div>`;
+      return `<div class="banner sched"><p>Este PvP vem depois do Current PvP (${esc(CONF.cur)}), então o que você montar aqui ainda não conta nas estatísticas.</p></div>`;
     return "";
   }
 
