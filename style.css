@@ -1239,3 +1239,238 @@ dialog::backdrop {
   place-items: center;
   border: 2px solid var(--surface-2);
 }
+
+/* ---------- página do PvP: cards das Umas ---------- */
+.umacards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.umacard {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 10px 12px;
+  text-decoration: none;
+  color: var(--fg);
+  align-content: start;
+}
+.umacard:hover {
+  border-color: var(--accent);
+}
+.umacard.debuff {
+  background: var(--surface-2);
+}
+.umacard .art {
+  width: 96px;
+  height: 96px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.umacard .art .spr,
+.umacard .art .ph {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+.umacard .info {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  min-width: 0;
+}
+.umacard .nm {
+  font-family: var(--f-display);
+  font-size: 16px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.umacard .tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.chip.ace {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.chip.deb {
+  background: transparent;
+  border: 1px solid var(--loh);
+  color: var(--loh);
+}
+.wrbox {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.wrbox b {
+  font-family: var(--f-display);
+  font-size: 22px;
+}
+.wrbox small {
+  color: var(--muted);
+}
+.umacard .minis {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px 10px;
+  align-items: center;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+.mrow {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
+}
+.mrow .m {
+  aspect-ratio: 1;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.mrow.deckrow .m {
+  aspect-ratio: 3 / 4;
+  border-radius: 4px;
+}
+.mrow .m.off {
+  opacity: 0.35;
+}
+.mrow .m.borrow {
+  box-shadow: 0 0 0 2px var(--pink);
+}
+.mrow .m .spr,
+.mrow .m .ph {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  font-size: 7px;
+}
+.umacard.empty {
+  grid-template-columns: 1fr;
+  place-items: center;
+  min-height: 160px;
+  color: var(--muted);
+  border-style: dashed;
+  font-weight: 700;
+}
+.umacard.empty .plus {
+  font-size: 32px;
+  font-weight: 300;
+}
+
+/* ---------- rounds ---------- */
+.rounds {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+.rounds .day {
+  display: grid;
+  gap: 4px;
+}
+.rounds .day .label {
+  font-size: 10px;
+}
+.rounds input {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 7px 8px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.rounds input.bad {
+  border-color: var(--loh);
+}
+.rounds .dwr {
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+  min-height: 1.2em;
+}
+.cmhead h1 a {
+  color: inherit;
+  text-decoration: none;
+}
+.cmhead h1 .sub {
+  color: var(--muted);
+  font-size: 0.7em;
+}
+
+/* ---------- página da Uma ---------- */
+.umatabs {
+  margin-top: -4px;
+}
+.umatabs .tog {
+  text-decoration: none;
+}
+.fields .wins .of {
+  color: var(--muted);
+  font-size: 13px;
+}
+.fields .wrbox b {
+  font-size: 26px;
+}
+.runner.big {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 24px;
+  align-items: start;
+}
+.runner.big .rtop {
+  grid-template-columns: 1fr;
+}
+.runner.big .slot.main {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  max-width: 320px;
+}
+.runner.big .rname {
+  font-size: 22px;
+}
+.runner.big .lower {
+  border-top: 0;
+  padding-top: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 24px;
+}
+.runner.big .tree .gp,
+.runner.big .tree .par {
+  font-size: 12px;
+}
+.runner.big .deck {
+  gap: 8px;
+}
+@media (max-width: 960px) {
+  .umacards {
+    grid-template-columns: 1fr;
+    max-width: 560px;
+  }
+  .runner.big {
+    grid-template-columns: 1fr;
+  }
+  .runner.big .slot.main {
+    max-width: 200px;
+  }
+}
+@media (max-width: 560px) {
+  .rounds {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .runner.big .lower {
+    grid-template-columns: 1fr;
+  }
+}
+
+.umacard .minis .none {
+  color: var(--faint);
+}
+.mrow .m.off {
+  background: transparent;
+  border: 1px dashed var(--line);
+}

@@ -27,14 +27,21 @@
     return "Long";
   }
 
-  /** Uma rodada é "n-n-n-n" com notas de 0 a 5 (até quatro números). */
+  /**
+   * Um dia de round aceita dois formatos:
+   * - vitórias de cada tentativa, de 0 a 5, separadas por hífen: "5-4-3-5"
+   * - o total de vitórias do dia, de 0 a 20: "17"
+   */
   function isValidRound(v) {
-    return !v || /^[0-5](-[0-5]){0,3}$/.test(String(v).trim());
+    if (!v) return true;
+    const x = String(v).trim();
+    return /^(1?\d|20)$/.test(x) || /^[0-5](-[0-5]){1,3}$/.test(x);
   }
 
   /**
-   * WR das rodadas: soma das notas ÷ (rodadas preenchidas × 20).
-   * Ex.: ["4-5-4-4"] → 17/20 = 0,85. Rodadas vazias não entram na conta.
+   * WR dos rounds: vitórias ÷ (dias preenchidos × 20).
+   * Cada dia vale até 20 vitórias (4 tentativas × 5 corridas), então
+   * "4-5-4-4" e "17" dão o mesmo: 17/20 = 0,85. Dias vazios não entram na conta.
    */
   function ratingScore(rat) {
     let sum = 0;

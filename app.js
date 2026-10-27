@@ -153,7 +153,7 @@
 
   /* ---------- navegação ---------- */
   function setNav(tab) {
-    $("#back").hidden = !/^#(cm|rank)-/.test(location.hash);
+    $("#back").hidden = !/^#(cm|rank|uma)-/.test(location.hash);
     for (const id of ["resumo", "cms"])
       $("#nav-" + id).toggleAttribute("aria-current", id === tab);
     $("#nav-" + tab).setAttribute("aria-current", "page");
@@ -162,6 +162,8 @@
     const h = location.hash.slice(1);
     if (h.startsWith("cm-") && CM_BY_ID.has(h.slice(3)))
       return viewCM(h.slice(3));
+    const uma = /^uma-(.+)-([123])$/.exec(h);
+    if (uma && CM_BY_ID.has(uma[1])) return viewUma(uma[1], uma[2] - 1);
     if (h === "cms") return viewList();
     if (RANKINGS[h]) return viewRanking(h);
     return viewResumo();
@@ -410,20 +412,20 @@
   }
 
   /* ---------- página de um PvP ---------- */
+  const ROUND_LABELS = [
+    "Round 1 · Day 1",
+    "Round 1 · Day 2",
+    "Round 2 · Day 1",
+    "Round 2 · Day 2",
+  ];
+  const umaWr = (t) => (t.w != null ? pct(t.w / L.WINS_TOTAL) : "–");
+
   function currentNote(id) {
-    const ph = phase(id);
-    if (ph === "current")
-      return `<div class="banner sched"><p><b>Current PvP.</b> ${finalPassed() ? "A final já passou e ele já conta nas estatísticas." : `Entra nas estatísticas depois da final${CONF.date ? ` (${finalLabel()})` : ""}${CONF.est ? `, com ${L.MARGIN_DAYS} dias de folga por ser data estimada` : ""}.`}</p></div>`;
-    if (ph === "future")
-      return `<div class="banner sched"><p>Este PvP vem depois do Current PvP (${esc(CONF.cur)}), então o que você montar aqui ainda não conta nas estatísticas.</p></div>`;
-    return "";
+    if (phase(id) !== "current") return "";
+    return `<div class="banner sched"><p><b>Current PvP.</b> ${finalPassed() ? "A final já passou e ele já conta nas estatísticas." : `Entra nas estatísticas depois da final${CONF.date ? ` (${finalLabel()})` : ""}${CONF.est ? `, com ${L.MARGIN_DAYS} dias de folga por ser data estimada` : ""}.`}</p></div>`;
   }
 
-  function viewCM(id) {
-    setNav("cms");
-    const cm = CM_BY_ID.get(id);
-    const d = record(id);
-    const sc = L.ratingScore(d.rat);
+  function pvpHead(cm, sub = "") {
     const prev = CAT.cms[cm.i - 1];
     const next = CAT.cms[cm.i + 1];
     const meta = [
@@ -439,90 +441,158 @@
       .filter(Boolean)
       .map((x) => `<span class="chip">${esc(x)}</span>`)
       .join("");
-    $("#app").innerHTML = `
-  <section class="cmhead">
-    <div><div class="label">${esc(cm.sc)}${cm.nm ? " · " + esc(cm.nm) : ""}</div><h1 class="cmid ${isLoh(id) ? "loh" : ""}">${esc(id)}</h1></div>
+    const nav = sub
+      ? ""
+      : `<div class="nav2">${prev ? `<a class="btn" href="#cm-${esc(prev.id)}">← ${esc(prev.id)}</a>` : ""}<a class="btn" href="#cms">All PvP</a>${next ? `<a class="btn" href="#cm-${esc(next.id)}">${esc(next.id)} →</a>` : ""}</div>`;
+    return `<section class="cmhead">
+    <div><div class="label">${esc(cm.sc)}${cm.nm ? " · " + esc(cm.nm) : ""}</div><h1><a class="cmid ${isLoh(cm.id) ? "loh" : ""}" href="#cm-${esc(cm.id)}">${esc(cm.id)}</a>${sub}</h1></div>
     <div class="meta">${meta}</div>
-    <div class="nav2">${prev ? `<a class="btn" href="#cm-${esc(prev.id)}">← ${esc(prev.id)}</a>` : ""}<a class="btn" href="#cms">All PvP</a>${next ? `<a class="btn" href="#cm-${esc(next.id)}">${esc(next.id)} →</a>` : ""}</div>
-  </section>
-  ${currentNote(id)}
-  <section class="result">
-    <div class="panel"><div class="label">Final placement</div>
-      <div class="places" role="group" aria-label="Final placement">${[...PLACES, ""].map((p) => `<button type="button" class="p-${p ? p.replace(" ", "") : "none"}" data-pl="${p}" aria-pressed="${d.pl === p}">${p || "No result"}</button>`).join("")}</div>
-    </div>
-    <div class="panel"><div class="label">Round WR <span style="text-transform:none;letter-spacing:0;font-weight:500">· quatro números de 0 a 5, ex.: 4-5-4-4</span></div>
-      <div class="rats">${d.rat.map((r, k) => `<input id="rat-${k}" inputmode="numeric" placeholder="Round ${k + 1}" value="${esc(r)}" aria-label="Round ${k + 1}">`).join("")}</div>
-      <div class="score"><b class="num" id="score">${sc ? pct(sc) : "–"}</b><span style="color:var(--muted)">WR</span></div>
-    </div>
-  </section>
-  <section class="team">${d.team.map(runnerHtml).join("")}</section>`;
+    ${nav}
+  </section>`;
+  }
 
-    const change = (fn, rerender = true) => {
-      fn();
-      save();
-      if (rerender) viewCM(id);
-    };
-    document
-      .querySelectorAll("[data-pl]")
-      .forEach((b) =>
-        b.addEventListener("click", () => change(() => (d.pl = b.dataset.pl))),
-      );
+  /** Card resumido de uma Uma na página do PvP; clicar abre a página dela. */
+  function umaCardHtml(cmId, t, k) {
+    const href = `#uma-${esc(cmId)}-${k + 1}`;
+    if (!t.n)
+      return `<a class="panel umacard empty" href="${href}"><span class="plus">+</span><span>Escolher Uma ${k + 1}</span></a>`;
+    const mini = (items, img, borrowedAt = -1) =>
+      items
+        .map(
+          (x, j) =>
+            `<span class="m ${j === borrowedAt ? "borrow" : ""} ${x ? "" : "off"}">${x ? img(x) : ""}</span>`,
+        )
+        .join("");
+    return `<a class="panel umacard ${t.ro === "Debuffer" ? "debuff" : ""}" href="${href}" title="Abrir ${esc(t.n)}">
+    <span class="art">${charImg(t.n, true)}</span>
+    <span class="info">
+      <b class="nm">${esc(t.n)}</b>
+      <span class="tags"><span class="chip ${t.ro === "Debuffer" ? "deb" : "ace"}">${esc(t.ro)}</span>${t.st ? `<span class="chip">${esc(t.st)}</span>` : ""}</span>
+      <span class="wrbox"><span class="label">WR</span><b class="num">${umaWr(t)}</b><small>${t.w != null ? `${t.w} / ${L.WINS_TOTAL} wins` : "sem wins"}</small></span>
+    </span>
+    <span class="minis">
+      <span class="label">Parents</span>${t.p.some(Boolean) ? `<span class="mrow">${mini(t.p, (x) => charImg(x))}</span>` : '<span class="none">—</span>'}
+      <span class="label">Deck</span>${t.d.some(Boolean) ? `<span class="mrow deckrow">${mini(t.d, cardImg, L.BORROWED_SLOT)}</span>` : '<span class="none">—</span>'}
+    </span>
+  </a>`;
+  }
+
+  function viewCM(id) {
+    setNav("cms");
+    const cm = CM_BY_ID.get(id);
+    const d = record(id);
+    const total = L.ratingScore(d.rat);
+    $("#app").innerHTML = `
+  ${pvpHead(cm)}
+  ${currentNote(id)}
+  <section class="umacards">${d.team.map((t, k) => umaCardHtml(id, t, k)).join("")}</section>
+  <section class="result">
+    <div class="panel"><div class="label">Final</div>
+      <div class="places" role="group" aria-label="Final">${[...PLACES, ""].map((p) => `<button type="button" class="p-${p ? p.replace(" ", "") : "none"}" data-pl="${p}" aria-pressed="${d.pl === p}">${p || "No result"}</button>`).join("")}</div>
+    </div>
+    <div class="panel"><div class="label">Rounds <span style="text-transform:none;letter-spacing:0;font-weight:500">· vitórias de cada tentativa (5-4-3-5) ou o total do dia (17)</span></div>
+      <div class="rounds">${d.rat
+        .map(
+          (
+            r,
+            k,
+          ) => `<label class="day"><span class="label">${ROUND_LABELS[k]}</span>
+          <input id="rat-${k}" inputmode="numeric" placeholder="5-4-3-5 ou 17" value="${esc(r)}" class="${L.isValidRound(r) ? "" : "bad"}">
+          <span class="num dwr" id="dwr-${k}">${r && L.isValidRound(r) ? pct(L.ratingScore([r])) : ""}</span></label>`,
+        )
+        .join("")}</div>
+      <div class="score"><b class="num" id="score">${total ? pct(total) : "–"}</b><span style="color:var(--muted)">WR total</span></div>
+    </div>
+  </section>`;
+
+    document.querySelectorAll("[data-pl]").forEach((b) =>
+      b.addEventListener("click", () => {
+        d.pl = b.dataset.pl;
+        save();
+        viewCM(id);
+      }),
+    );
     d.rat.forEach((_, k) => {
       const input = $("#rat-" + k);
       input.addEventListener("input", () => {
         const v = input.value.trim();
-        input.classList.toggle("bad", !L.isValidRound(v));
-        change(() => (d.rat[k] = v), false);
+        const ok = L.isValidRound(v);
+        input.classList.toggle("bad", !ok);
+        d.rat[k] = v;
+        save();
+        $("#dwr-" + k).textContent = v && ok ? pct(L.ratingScore([v])) : "";
         const s = L.ratingScore(d.rat);
         $("#score").textContent = s ? pct(s) : "–";
       });
     });
-    d.team.forEach((t, k) => {
-      const card = document.querySelector(`.runner[data-k="${k}"]`);
-      const pickUma = () =>
-        openPicker("char", t.n, `Uma ${k + 1}`, (v) => change(() => (t.n = v)));
-      card.querySelector(".main").addEventListener("click", pickUma);
-      card.querySelector(".rname").addEventListener("click", pickUma);
-      card
-        .querySelector("[name=ro]")
-        .addEventListener("change", (e) =>
-          change(() => (t.ro = e.target.value)),
-        );
-      card
-        .querySelector("[name=st]")
-        .addEventListener("change", (e) =>
-          change(() => (t.st = e.target.value || null), false),
-        );
-      const wins = card.querySelector("[name=w]");
-      wins.addEventListener("input", () => {
-        const v = parseInt(wins.value, 10);
-        change(() => (t.w = isNaN(v) ? null : v), false);
-        card.querySelector(".wrp").textContent =
-          t.w != null ? pct(t.w / L.WINS_TOTAL) : "";
-      });
-      card.querySelectorAll("[data-p]").forEach((b) =>
-        b.addEventListener("click", () => {
-          const j = +b.dataset.p;
-          openPicker(
-            "char",
-            t.p[j],
-            `${PAR[j]} · ${t.n || "Uma " + (k + 1)}`,
-            (v) => change(() => (t.p[j] = v)),
-          );
-        }),
-      );
-      card.querySelectorAll("[data-d]").forEach((b) =>
-        b.addEventListener("click", () => {
-          const j = +b.dataset.d;
-          const title =
-            j === L.BORROWED_SLOT ? "Borrowed card" : `Support card ${j + 1}`;
-          openPicker("card", t.d[j], title, (v) => change(() => (t.d[j] = v)));
-        }),
-      );
-    });
   }
 
-  function runnerHtml(t, k) {
+  /* ---------- página de uma Uma (dentro de um PvP) ---------- */
+  function viewUma(id, k) {
+    setNav("cms");
+    const cm = CM_BY_ID.get(id);
+    const d = record(id);
+    const t = d.team[k];
+    const tabs = d.team
+      .map(
+        (u, j) =>
+          `<a class="tog" href="#uma-${esc(id)}-${j + 1}" aria-pressed="${j === k}">${u.n ? esc(u.n) : "Uma " + (j + 1)}</a>`,
+      )
+      .join("");
+    $("#app").innerHTML = `
+  ${pvpHead(cm, ` <span class="sub">· Uma ${k + 1}</span>`)}
+  <nav class="seg umatabs" aria-label="Umas deste PvP">${tabs}</nav>
+  <section>${runnerHtml(t, k, true)}</section>`;
+    bindRunner(document.querySelector(".runner"), t, k, () => viewUma(id, k));
+  }
+
+  /** Liga os botões e campos de um card de Uma editável. */
+  function bindRunner(card, t, k, rerender) {
+    const change = (fn, redraw = true) => {
+      fn();
+      save();
+      if (redraw) rerender();
+    };
+    const pickUma = () =>
+      openPicker("char", t.n, `Uma ${k + 1}`, (v) => change(() => (t.n = v)));
+    card.querySelector(".main").addEventListener("click", pickUma);
+    card.querySelector(".rname").addEventListener("click", pickUma);
+    card
+      .querySelector("[name=ro]")
+      .addEventListener("change", (e) => change(() => (t.ro = e.target.value)));
+    card
+      .querySelector("[name=st]")
+      .addEventListener("change", (e) =>
+        change(() => (t.st = e.target.value || null), false),
+      );
+    const wins = card.querySelector("[name=w]");
+    wins.addEventListener("input", () => {
+      const v = parseInt(wins.value, 10);
+      change(() => (t.w = isNaN(v) ? null : v), false);
+      card.querySelector(".wrp").textContent = umaWr(t);
+    });
+    card.querySelectorAll("[data-p]").forEach((b) =>
+      b.addEventListener("click", () => {
+        const j = +b.dataset.p;
+        openPicker(
+          "char",
+          t.p[j],
+          `${PAR[j]} · ${t.n || "Uma " + (k + 1)}`,
+          (v) => change(() => (t.p[j] = v)),
+        );
+      }),
+    );
+    card.querySelectorAll("[data-d]").forEach((b) =>
+      b.addEventListener("click", () => {
+        const j = +b.dataset.d;
+        const title =
+          j === L.BORROWED_SLOT ? "Borrowed card" : `Support card ${j + 1}`;
+        openPicker("card", t.d[j], title, (v) => change(() => (t.d[j] = v)));
+      }),
+    );
+  }
+
+  function runnerHtml(t, k, big = false) {
     const slot = (cls, inner, attrs, label, empty, extra = "") =>
       `<button type="button" class="slot ${cls} ${inner ? "filled" : ""}" ${attrs} aria-label="${esc(label)}" title="${esc(label)}">${inner || empty}${extra}</button>`;
     const parent = (j) =>
@@ -546,14 +616,14 @@
         );
       })
       .join("");
-    const winsPct = t.w != null ? pct(t.w / L.WINS_TOTAL) : "";
-    return `<article class="panel runner ${t.ro === "Debuffer" ? "debuff" : ""}" data-k="${k}">
+    return `<article class="panel runner ${big ? "big" : ""} ${t.ro === "Debuffer" ? "debuff" : ""}" data-k="${k}">
     <div class="rtop">${slot("main", t.n ? charImg(t.n, true) : "", "", t.n ? `Change ${t.n}` : "Choose Uma", '<span class="plus">+</span>')}
-      <div><button type="button" class="rname">${t.n ? esc(t.n) : `<span style="color:var(--muted)">Uma ${k + 1}</span>`}</button>
+      <div><button type="button" class="rname">${t.n ? esc(t.n) : `<span style="color:var(--muted)">Escolher Uma ${k + 1}</span>`}</button>
         <div class="fields">
           <label class="nolab"><select name="ro" aria-label="Ace ou Debuffer">${ROLES.map((r) => `<option ${t.ro === r ? "selected" : ""}>${r}</option>`).join("")}</select></label>
           <label class="nolab"><select name="st" aria-label="Style"><option value="">Style —</option>${STYLES.map((s) => `<option ${t.st === s ? "selected" : ""}>${s}</option>`).join("")}</select></label>
-          <label>Wins<span class="wins"><input name="w" type="number" min="0" max="${L.WINS_TOTAL}" inputmode="numeric" value="${t.w ?? ""}" aria-label="Wins (de ${L.WINS_TOTAL})"><span class="num wrp" style="color:var(--muted)">${winsPct}</span></span></label>
+          <label>Wins<span class="wins"><input name="w" type="number" min="0" max="${L.WINS_TOTAL}" inputmode="numeric" value="${t.w ?? ""}" aria-label="Wins (de ${L.WINS_TOTAL})"><span class="of">/ ${L.WINS_TOTAL}</span></span></label>
+          <div class="wrbox"><span class="label">WR</span><b class="num wrp">${umaWr(t)}</b></div>
         </div></div></div>
     <div class="lower">
       <div><div class="label">Parents</div>
@@ -703,7 +773,15 @@
     if (backStack.length) {
       goingBack = true;
       location.hash = backStack.pop() || "resumo";
-    } else location.hash = "cms";
+    } else {
+      // sem histórico (ex.: página recarregada): sobe um nível
+      const uma = /^#uma-(.+)-\d$/.exec(location.hash);
+      location.hash = uma
+        ? "cm-" + uma[1]
+        : location.hash.startsWith("#rank-")
+          ? "resumo"
+          : "cms";
+    }
   });
   window.addEventListener("hashchange", () => {
     if (!goingBack && lastHash !== location.hash) backStack.push(lastHash);

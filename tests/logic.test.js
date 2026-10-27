@@ -29,11 +29,16 @@ test("WR das rodadas: soma ÷ (rodadas preenchidas × 20)", () => {
   assert.equal(L.ratingScore(undefined), 0);
 });
 
-test("rodada válida: até quatro notas de 0 a 5", () => {
-  for (const ok of ["", "4", "4-5", "4-5-4-4", "0-0-0-0"])
+test("dia de round válido: tentativas (5-4-3-5) ou total do dia (17)", () => {
+  for (const ok of ["", "4", "17", "20", "0", "4-5", "4-5-4-4", "0-0-0-0"])
     assert.ok(L.isValidRound(ok), ok);
-  for (const bad of ["6-5-4-4", "4-5-4-4-4", "4--5", "abc", "45"])
+  for (const bad of ["21", "6-5-4-4", "4-5-4-4-4", "4--5", "abc", "-3"])
     assert.ok(!L.isValidRound(bad), bad);
+});
+
+test("total do dia e tentativas dão o mesmo WR", () => {
+  assert.equal(L.ratingScore(["17"]), L.ratingScore(["4-5-4-4"]));
+  assert.equal(L.ratingScore(["17", "", "20", ""]), 37 / 40);
 });
 
 test("sem Current CM, todos os PvPs contam", () => {

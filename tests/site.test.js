@@ -83,23 +83,37 @@ test("preencher um PvP salva no navegador e continua lá depois de recarregar", 
   await page.goto(base + "#cm-CM5");
   await page.click('[data-pl="1st"]');
   await page.fill("#rat-0", "4-5-4-4");
-  await page.locator(".runner").first().locator(".main").click();
+  await page.fill("#rat-1", "17"); // total do dia também vale
+  // clicar no card da Uma abre a página dela, onde se escolhe Uma, parents e deck
+  await page.locator(".umacard").first().click();
+  await page.waitForSelector(".runner.big");
+  await page.locator(".runner .main").click();
   await page.fill("#pk-q", "Oguri Cap");
   await page.locator("#pk-list button").first().click();
+  await page.locator('.runner [data-d="5"]').click();
+  await page.locator("#pk-list button").first().click();
+  await page.fill('.runner [name="w"]', "40");
+  assert.equal(await page.textContent(".runner .wrp"), "50%");
   await page.waitForFunction(
     () =>
       document.querySelector("#status").textContent === "Salvo neste navegador",
   );
 
   await page.reload();
+  await page.waitForSelector(".runner.big");
+  assert.match(await page.textContent(".runner .rname"), /Oguri Cap/);
+  assert.equal(await page.inputValue('.runner [name="w"]'), "40");
+  await page.click("#back"); // volta para a página do PvP
   await page.waitForSelector('[data-pl="1st"]');
   assert.equal(
     await page.getAttribute('[data-pl="1st"]', "aria-pressed"),
     "true",
   );
   assert.equal(await page.inputValue("#rat-0"), "4-5-4-4");
-  assert.match(await page.textContent(".runner .rname"), /Oguri Cap/);
+  assert.equal(await page.inputValue("#rat-1"), "17");
   assert.equal(await page.textContent("#score"), "85%");
+  assert.match(await page.textContent(".umacard .nm"), /Oguri Cap/);
+  assert.match(await page.textContent(".umacard .wrbox"), /50%/);
 
   const saved = await page.evaluate(() =>
     JSON.parse(localStorage.getItem("cmcomps:data")),
