@@ -650,7 +650,7 @@
         <div class="tree">
           ${parent(0)}${parent(3)}
           ${parent(1)}${parent(2)}${parent(4)}${parent(5)}
-        </div></div>
+        </div>${big ? '<div class="affinity" aria-hidden="true"></div>' : ""}</div>
       <div><div class="label">Deck</div><div class="deck">${deck}</div></div>
     </div>
   </article>`;
