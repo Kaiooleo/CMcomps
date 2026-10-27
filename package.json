@@ -1,0 +1,16 @@
+{
+  "name": "cmcomps",
+  "private": true,
+  "description": "Times de Champions Meeting e League of Heroes de Uma Musume",
+  "scripts": {
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "node --test tests/logic.test.js",
+    "test:e2e": "node --test --test-concurrency=1 tests/site.test.js",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "playwright": "1.63.0",
+    "prettier": "3.8.1"
+  }
+}

@@ -1,13 +1,17 @@
+/*
+ * CM Comps — telas e interação.
+ * As regras e os cálculos ficam em logic.js (window.CMLogic); os dados em data.js.
+ */
 (() => {
+  const L = window.CMLogic;
   const CAT = window.CM_CATALOG;
   const ATLAS = window.CM_ATLAS;
-  const IMGS = { has: (f) => !!(f && ATLAS[f]) };
-  function spr(f, alt) {
-    const [u, c, r, C, R] = ATLAS[f];
-    return `<span class="spr" role="img" aria-label="${esc(alt)}" style="background-image:url(${u});background-size:${C * 100}% ${R * 100}%;background-position:${C > 1 ? (c / (C - 1)) * 100 : 0}% ${R > 1 ? (r / (R - 1)) * 100 : 0}%"></span>`;
-  }
-  const CHAR = new Map(CAT.chars.map((c) => [c.n, c]));
-  const CARD = new Map(CAT.cards.map((c) => [c.k, c]));
+  const CONF = window.CM_CONFIG || { cur: null, date: null };
+
+  const STORAGE_KEY = "cmcomps:data";
+  const LEGACY_KEY = "cmcomps:data:v1"; // versão inicial (mapa puro, sem número de formato)
+  const SAVE_DELAY = 500;
+
   const STYLES = [
     "Runaway",
     "Front Runner",
@@ -16,9 +20,15 @@
     "End Closer",
   ];
   const ROLES = ["Ace", "Debuffer"];
-  const PLACES = ["1st", "2nd", "3rd", "B 1st"];
   const TYPES = ["Speed", "Stamina", "Power", "Guts", "Wit", "Pal", "Group"];
   const PAR = ["P1", "GP1.1", "GP1.2", "P2", "GP2.1", "GP2.2"];
+  const { PLACES } = L;
+
+  const CHAR = new Map(CAT.chars.map((c) => [c.n, c]));
+  const CARD = new Map(CAT.cards.map((c) => [c.k, c]));
+  const CM_BY_ID = new Map(CAT.cms.map((c, i) => [c.id, { ...c, i }]));
+
+  /* ---------- utilidades ---------- */
   const $ = (s) => document.querySelector(s);
   const esc = (s) =>
     String(s ?? "").replace(
@@ -32,190 +42,78 @@
           "'": "&#39;",
         })[c],
     );
-  const dist = (m) =>
-    !m
-      ? ""
-      : m <= 1400
-        ? "Sprint"
-        : m <= 1999
-          ? "Mile"
-          : m <= 2400
-            ? "Medium"
-            : "Long";
+  const pct = (x) => (Math.round(x * 1000) / 10).toLocaleString("pt-BR") + "%";
   const plClass = (p) => (p ? "pl-" + p.replace(" ", "") : "");
   const typeVar = (t) =>
     "var(--t-" + (t || "").toLowerCase() + ",var(--muted))";
-
-  /* ---------- estado ---------- */
-  let DATA = {};
-  /* ---------- CM atual (configuração do dono, vale para todos) ---------- */
-  let CONF = { cur: null, date: null };
-  const cmIdx = (id) => CAT.cms.findIndex((c) => c.id === id);
-  const cond = (c) => [c.se, c.we, c.gr].filter(Boolean).map(esc).join(" · ");
   const fmtDate = (d) => (d ? d.split("-").reverse().join("/") : "");
-  // data vazia = sem data; ano fora de 2020–2100 = inválida (evita salvar enquanto digita)
-  function okDate(v) {
-    if (!v) return null;
-    const y = +v.slice(0, 4);
-    if (y < 2020 || y > 2100) {
-      status("Data inválida: confira o ano (ex.: 05/11/2026).", true);
-      return false;
-    }
-    return v;
-  }
-  function finalPassed() {
-    if (!CONF.date || +CONF.date.slice(0, 4) < 2020) return false;
-    return new Date() > new Date(CONF.date + "T23:59:59");
-  }
-  // 'past' conta; 'current' conta só depois da final; 'future' não conta
-  function phase(id) {
-    if (!CONF.cur || cmIdx(CONF.cur) < 0) return "past";
-    const i = cmIdx(id),
-      c = cmIdx(CONF.cur);
-    return i < c ? "past" : i === c ? "current" : "future";
-  }
-  function counted(id) {
-    const ph = phase(id);
-    return ph === "past" || (ph === "current" && finalPassed());
-  }
-  async function saveConf(next) {
-    const prev = CONF;
-    CONF = next;
-    route();
+  const cond = (c) => [c.se, c.we, c.gr].filter(Boolean).map(esc).join(" · ");
+  const isLoh = (id) => id.startsWith("LOH");
+  const status = (text, isError = false) => {
+    const s = $("#status");
+    s.textContent = text;
+    s.classList.toggle("err", isError);
+  };
+
+  /* ---------- Current CM (definido em data.js) ---------- */
+  const phase = (id) => L.phase(CAT.cms, CONF, id);
+  const counted = (id) => L.counted(CAT.cms, CONF, id);
+  const finalPassed = () => L.finalPassed(CONF);
+
+  /* ---------- dados do usuário ---------- */
+  let DATA = {};
+  const record = (id) => DATA[id] || (DATA[id] = L.blankRecord());
+
+  function load() {
     try {
-      await db.doc("config/schedule").set(next);
-      status("Current CM salvo");
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return L.migrate(JSON.parse(raw));
+      const legacy = localStorage.getItem(LEGACY_KEY);
+      if (legacy) {
+        const data = L.migrate(JSON.parse(legacy));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(L.serialize(data)));
+        localStorage.removeItem(LEGACY_KEY);
+        return data;
+      }
     } catch (e) {
-      CONF = prev;
-      route();
-      status("Não foi possível salvar o Current CM.", true);
+      status(
+        e && e.message && e.message.includes("versão")
+          ? e.message
+          : "Não foi possível ler os dados salvos neste navegador.",
+        true,
+      );
+    }
+    return {};
+  }
+
+  let saveTimer = null;
+  function save() {
+    status("Salvando…");
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(flush, SAVE_DELAY);
+  }
+  function flush() {
+    saveTimer = null;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(L.serialize(DATA)));
+      status("Salvo neste navegador");
+    } catch (_) {
+      status(
+        "Este navegador não deixou salvar. Use “Baixar backup” para não perder seus dados.",
+        true,
+      );
     }
   }
-  function scheduleBanner() {
-    if (!CONF.cur || cmIdx(CONF.cur) < 0)
-      return owner && db
-        ? `<div class="banner"><p>Todos os CMs entram nas estatísticas. Para não contar os times que você está planejando, marque o CM atual na página dele.</p></div>`
-        : "";
-    const i = cmIdx(CONF.cur),
-      nx = CAT.cms[i + 1],
-      passed = finalPassed();
-    const txt = passed
-      ? `A final do <b>${esc(CONF.cur)}</b> já passou (${fmtDate(CONF.date)}), então ele já conta. Os CMs depois dele ainda ficam de fora.`
-      : `O <b>${esc(CONF.cur)}</b> é o CM atual. Ele entra nas estatísticas depois da final${CONF.date ? ` (${fmtDate(CONF.date)})` : ""}. Os CMs depois dele ficam de fora.`;
-    const act =
-      passed && owner && nx
-        ? `<span class="confirm"><input type="date" id="nx-date" class="search" style="max-width:170px" aria-label="Data da final do ${esc(nx.id)}"><button class="btn primary" type="button" id="nx-go">Definir ${esc(nx.id)} como atual</button></span>`
-        : "";
-    return `<div class="banner sched"><p>${txt}</p>${act}</div>`;
-  }
+  // não perde a última mudança se a página for fechada logo depois de editar
+  window.addEventListener("pagehide", () => saveTimer && flush());
 
-  function currentHero() {
-    if (!CONF.cur || cmIdx(CONF.cur) < 0)
-      return owner && db
-        ? `<div class="banner"><p>Nenhum Current CM definido, então todos os CMs entram nas estatísticas. Para marcar, abra o CM que está acontecendo.</p></div>`
-        : "";
-    const cm = CAT.cms[cmIdx(CONF.cur)],
-      nx = CAT.cms[cmIdx(CONF.cur) + 1],
-      d = DATA[cm.id],
-      passed = finalPassed();
-    const days =
-      CONF.date && +CONF.date.slice(0, 4) >= 2020
-        ? Math.ceil((new Date(CONF.date + "T23:59:59") - new Date()) / 864e5)
-        : null;
-    const when = passed
-      ? `Final em ${fmtDate(CONF.date)} · concluída`
-      : days != null
-        ? `Final em ${fmtDate(CONF.date)} · ${days <= 0 ? "hoje" : days === 1 ? "amanhã" : `faltam ${days} dias`}`
-        : "Data da final não definida";
-    const team = d ? d.team.filter((t) => t.n) : [];
-    const act =
-      passed && owner && nx
-        ? `<div class="confirm ch-next"><input type="date" id="nx-date" class="search" style="max-width:170px" aria-label="Final do ${esc(nx.id)}"><button class="btn primary" type="button" id="nx-go">Definir ${esc(nx.id)} como Current CM</button></div>`
-        : "";
-    return `<section class="curhero">
-    <a class="ch-main" href="#cm-${esc(cm.id)}">
-      <div class="label" style="color:var(--accent)">Current CM</div>
-      <h1><span class="cmid ${cm.id.startsWith("LOH") ? "loh" : ""}">${esc(cm.id)}</span> <span class="sc">· ${esc(cm.sc)}</span></h1>
-      <div class="ln num">${esc(cm.tr)} · ${cm.m || "?"}m · ${esc(cm.su)} · ${esc(dist(cm.m))}${cm.dir ? " · " + esc(cm.dir) : ""}</div>
-      ${cond(cm) ? `<div class="ln">${cond(cm)}</div>` : ""}
-      <div class="when"><span class="chip cur">${when}</span>${d && d.pl ? ` <span class="chip ${plClass(d.pl)}">${esc(d.pl)}</span>` : ""}</div>
-      <p class="note">${passed ? "Já conta nas estatísticas." : "Este CM e os seguintes ficam fora das estatísticas até a final."}</p>
-    </a>
-    <div class="ch-team">${team.length ? team.map((t) => `<a class="ct ${t.ro === "Debuffer" ? "debuff" : ""}" href="#cm-${esc(cm.id)}"><span class="av">${charImg(t.n, true)}</span><b>${esc(t.n)}</b><small>${esc(t.ro || "")}${t.st ? " · " + esc(t.st) : ""}</small></a>`).join("") : `<a class="btn primary" href="#cm-${esc(cm.id)}" style="align-self:center;justify-self:start">Montar time</a>`}</div>
-    ${act}
-  </section>`;
+  /* ---------- imagens (folhas em sp/) ---------- */
+  function spr(file, alt) {
+    const [url, c, r, C, R] = ATLAS[file];
+    const x = C > 1 ? (c / (C - 1)) * 100 : 0;
+    const y = R > 1 ? (r / (R - 1)) * 100 : 0;
+    return `<span class="spr" role="img" aria-label="${esc(alt)}" style="background-image:url(${url});background-size:${C * 100}% ${R * 100}%;background-position:${x}% ${y}%"></span>`;
   }
-  function currentPanel(id) {
-    const ph = phase(id),
-      isCur = CONF.cur === id;
-    if (!owner || !db) {
-      if (ph === "current")
-        return `<div class="banner sched"><p><b>Current CM.</b> ${finalPassed() ? "A final já passou e ele já conta nas estatísticas." : `Entra nas estatísticas depois da final${CONF.date ? ` (${fmtDate(CONF.date)})` : ""}.`}</p></div>`;
-      if (ph === "future")
-        return `<div class="banner sched"><p>Este CM vem depois do Current CM (${esc(CONF.cur)}), então o que você montar aqui ainda não conta nas estatísticas.</p></div>`;
-      return "";
-    }
-    if (isCur)
-      return `<div class="banner sched"><p><b>Current CM.</b> ${finalPassed() ? "A final já passou e ele já conta." : "Ele e os CMs seguintes ficam fora das estatísticas até a final."}</p>
-    <span class="confirm"><label class="label" for="cur-date">Final</label><input type="date" id="cur-date" class="search" style="max-width:170px" value="${esc(CONF.date || "")}"><button class="btn primary" type="button" id="cur-save">Salvar data</button><button class="btn" type="button" id="cur-clear">Remover Current CM</button></span></div>`;
-    return `<div class="banner sched"><p>${ph === "future" ? `Este CM vem depois do Current CM (${esc(CONF.cur)}) e ainda não conta nas estatísticas.` : "Marque como Current CM o CM que está acontecendo agora."}</p>
-    <span class="confirm"><label class="label" for="cur-date">Final</label><input type="date" id="cur-date" class="search" style="max-width:170px"><button class="btn primary" type="button" id="cur-set">Definir como Current CM</button></span></div>`;
-  }
-  function bindCurrent(id) {
-    const dt = $("#cur-date"),
-      set = $("#cur-set"),
-      clr = $("#cur-clear");
-    if (set)
-      set.addEventListener("click", () => {
-        const v = okDate(dt.value);
-        if (v !== false) saveConf({ cur: id, date: v });
-      });
-    if (clr)
-      clr.addEventListener("click", () => saveConf({ cur: null, date: null }));
-    const sv = $("#cur-save");
-    if (sv)
-      sv.addEventListener("click", () => {
-        const v = okDate(dt.value);
-        if (v !== false) saveConf({ cur: id, date: v });
-      });
-    if (dt)
-      dt.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          (sv || set).click();
-        }
-      });
-  }
-  function bindSchedule() {
-    const go = $("#nx-go");
-    if (!go) return;
-    go.addEventListener("click", () => {
-      const nx = CAT.cms[cmIdx(CONF.cur) + 1];
-      const v = okDate($("#nx-date").value);
-      if (v !== false) saveConf({ cur: nx.id, date: v });
-    });
-  }
-
-  let db = null,
-    uid = null,
-    owner = false,
-    canWrite = true;
-  const timers = new Map();
-  const blank = () => ({
-    team: [0, 1, 2].map(() => ({
-      n: null,
-      ro: "Ace",
-      st: null,
-      w: null,
-      p: Array(6).fill(null),
-      d: Array(6).fill(null),
-    })),
-    rat: ["", "", "", ""],
-    pl: "",
-  });
-  const get = (id) => DATA[id] || (DATA[id] = blank());
-
-  /* ---------- imagens ---------- */
   function initials(name) {
     return esc(
       String(name || "")
@@ -228,167 +126,118 @@
         .toUpperCase(),
     );
   }
-  function charImg(name, big) {
+  /** Arte da Uma (`big`) ou ícone; cai para as iniciais se não houver imagem. */
+  function charImg(name, big = false) {
     if (!name) return "";
     const c = CHAR.get(name);
-    const f =
-      c &&
-      (big && IMGS.has(c.s)
-        ? c.s
-        : IMGS.has(c.i)
-          ? c.i
-          : IMGS.has(c.s)
-            ? c.s
-            : null);
-    return f
-      ? spr(f, name)
+    const order = big ? [c && c.s, c && c.i] : [c && c.i, c && c.s];
+    const file = order.find((f) => f && ATLAS[f]);
+    return file
+      ? spr(file, name)
       : `<span class="ph" title="${esc(name)}">${initials(name)}</span>`;
   }
   function cardImg(key) {
     if (!key) return "";
     const c = CARD.get(key);
-    if (c && IMGS.has(c.im)) return spr(c.im, `${c.n} – ${c.t}`);
-    const n = c ? c.n : key.split("\n")[0];
-    return `<span class="ph" style="background:${c ? typeVar(c.ty) : "var(--surface-2)"};color:#fff" title="${esc(key)}">${esc(n)}</span>`;
+    if (c && ATLAS[c.im]) return spr(c.im, `${c.n} – ${c.t}`);
+    const name = c ? c.n : key.split("\n")[0];
+    return `<span class="ph" style="background:${c ? typeVar(c.ty) : "var(--surface-2)"};color:#fff" title="${esc(key)}">${esc(name)}</span>`;
   }
 
-  /* ---------- cálculos ---------- */
-  function ratingScore(rat) {
-    let s = 0,
-      n = 0;
-    for (const r of rat || []) {
-      if (!r) continue;
-      const nums = String(r)
-        .split("-")
-        .map((x) => parseInt(x, 10))
-        .filter((x) => !isNaN(x));
-      if (!nums.length) continue;
-      s += nums.reduce((a, b) => a + b, 0);
-      n++;
-    }
-    return n ? s / (n * 20) : 0;
-  }
-  const pct = (x) => (Math.round(x * 1000) / 10).toLocaleString("pt-BR") + "%";
-  function computeStats() {
-    const pl = { "1st": 0, "2nd": 0, "3rd": 0, "B 1st": 0 },
-      styles = {},
-      aces = {},
-      cards = {},
-      borrow = {};
-    const scores = [];
-    for (const cm of CAT.cms) {
-      const d = DATA[cm.id];
-      if (!d || !counted(cm.id)) continue;
-      if (pl[d.pl] !== undefined) pl[d.pl]++;
-      const sc = ratingScore(d.rat);
-      if (sc > 0) scores.push({ id: cm.id, sc, pl: d.pl });
-      for (const t of d.team) {
-        if (!t.n || t.ro === "Debuffer") continue;
-        aces[t.n] = (aces[t.n] || 0) + 1;
-        if (t.st) styles[t.st] = (styles[t.st] || 0) + 1;
-        t.d.forEach((k, i) => {
-          if (!k) return;
-          const m = i === 5 ? borrow : cards;
-          m[k] = (m[k] || 0) + 1;
-        });
-      }
-    }
-    const tot = PLACES.reduce((a, p) => a + pl[p], 0);
-    const top = (m, n) =>
-      Object.entries(m)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, n);
-    const sorted = [...scores].sort((a, b) => b.sc - a.sc);
-    return {
-      pl,
-      tot,
-      wr: tot ? pl["1st"] / tot : 0,
-      styles,
-      aces: top(aces, 10),
-      cards: top(cards, 5),
-      borrow: top(borrow, 5),
-      scores,
-      best: sorted[0],
-      worst: sorted[sorted.length - 1],
-      avg: scores.length
-        ? scores.reduce((a, b) => a + b.sc, 0) / scores.length
-        : 0,
-    };
-  }
-
-  /* ---------- roteamento ---------- */
-  function setNav(v) {
-    const h = location.hash;
-    $("#back").hidden = !h.startsWith("#cm-");
-    $("#nav-resumo").removeAttribute("aria-current");
-    $("#nav-cms").removeAttribute("aria-current");
-    $("#nav-" + v).setAttribute("aria-current", "page");
+  /* ---------- navegação ---------- */
+  function setNav(tab) {
+    $("#back").hidden = !location.hash.startsWith("#cm-");
+    for (const id of ["resumo", "cms"])
+      $("#nav-" + id).toggleAttribute("aria-current", id === tab);
+    $("#nav-" + tab).setAttribute("aria-current", "page");
   }
   function route() {
     const h = location.hash.slice(1);
-    if (h.startsWith("cm-")) {
-      const id = h.slice(3);
-      if (CAT.cms.some((c) => c.id === id)) return viewCM(id);
-    }
+    if (h.startsWith("cm-") && CM_BY_ID.has(h.slice(3)))
+      return viewCM(h.slice(3));
     if (h === "cms") return viewList();
     return viewResumo();
   }
-  function importBanner() {
-    if (!owner || !db || !uid || Object.keys(DATA).length) return "";
-    return `<div class="banner"><p><b>Seus dados da planilha estão prontos para importar.</b> São as composições, colocações e WR de 35 CMs, e ficam salvos só para você.</p><button class="btn primary" id="do-import" type="button">Importar da planilha</button></div>`;
+
+  /* ---------- Resumo ---------- */
+  function currentHero() {
+    const cm = CONF.cur && CM_BY_ID.get(CONF.cur);
+    if (!cm) return "";
+    const d = DATA[cm.id];
+    const passed = finalPassed();
+    const days = L.daysToFinal(CONF);
+    const when = passed
+      ? `Final em ${fmtDate(CONF.date)} · concluída`
+      : days != null
+        ? `Final em ${fmtDate(CONF.date)} · ${days <= 0 ? "hoje" : days === 1 ? "amanhã" : `faltam ${days} dias`}`
+        : "Data da final não definida";
+    const team = d ? d.team.filter((t) => t.n) : [];
+    const teamHtml = team.length
+      ? team
+          .map(
+            (t) =>
+              `<a class="ct ${t.ro === "Debuffer" ? "debuff" : ""}" href="#cm-${esc(cm.id)}"><span class="av">${charImg(t.n, true)}</span><b>${esc(t.n)}</b><small>${esc(t.ro)}${t.st ? " · " + esc(t.st) : ""}</small></a>`,
+          )
+          .join("")
+      : `<a class="btn primary" href="#cm-${esc(cm.id)}" style="align-self:center;justify-self:start">Montar time</a>`;
+    return `<section class="curhero">
+    <a class="ch-main" href="#cm-${esc(cm.id)}">
+      <div class="label" style="color:var(--accent)">Current CM</div>
+      <h1><span class="cmid ${isLoh(cm.id) ? "loh" : ""}">${esc(cm.id)}</span> <span class="sc">· ${esc(cm.sc)}</span></h1>
+      <div class="ln num">${esc(cm.tr)} · ${cm.m || "?"}m · ${esc(cm.su)} · ${esc(L.dist(cm.m))}${cm.dir ? " · " + esc(cm.dir) : ""}</div>
+      ${cond(cm) ? `<div class="ln">${cond(cm)}</div>` : ""}
+      <div class="when"><span class="chip cur">${when}</span>${d && d.pl ? ` <span class="chip ${plClass(d.pl)}">${esc(d.pl)}</span>` : ""}</div>
+      <p class="note">${passed ? "Já conta nas estatísticas." : "Este CM e os seguintes ficam fora das estatísticas até a final."}</p>
+    </a>
+    <div class="ch-team">${teamHtml}</div>
+  </section>`;
   }
 
-  /* ---------- resumo ---------- */
   function scoreChart(scores, avg) {
     if (!scores.length)
       return '<p class="empty">O WR aparece aqui quando você preencher as rodadas de um CM.</p>';
     const W = 640,
       H = 200,
-      L = 34,
-      R = 8,
-      T = 12,
-      B = 28,
-      n = scores.length,
-      bw = (W - L - R) / n,
-      y = (v) => T + (1 - v) * (H - T - B);
-    const ticks = [0, 0.25, 0.5, 0.75, 1];
-    const every = Math.max(1, Math.ceil(n / 12));
+      LEFT = 34,
+      RIGHT = 8,
+      TOP = 12,
+      BOTTOM = 28;
+    const bw = (W - LEFT - RIGHT) / scores.length;
+    const y = (v) => TOP + (1 - v) * (H - TOP - BOTTOM);
+    const every = Math.max(1, Math.ceil(scores.length / 12));
     let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="WR by PvP">`;
-    s += ticks
-      .map(
-        (t) =>
-          `<line x1="${L}" x2="${W - R}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)" stroke-width="1"/><text x="${L - 6}" y="${y(t) + 3}" text-anchor="end">${t * 100}%</text>`,
-      )
-      .join("");
+    for (const t of [0, 0.25, 0.5, 0.75, 1])
+      s += `<line x1="${LEFT}" x2="${W - RIGHT}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)" stroke-width="1"/><text x="${LEFT - 6}" y="${y(t) + 3}" text-anchor="end">${t * 100}%</text>`;
     scores.forEach((d, i) => {
-      const x = L + i * bw,
-        w = Math.max(3, bw - 4),
-        h = y(0) - y(d.sc),
-        r = Math.min(4, w / 2);
+      const x = LEFT + i * bw;
+      const w = Math.max(3, bw - 4);
+      const h = y(0) - y(d.sc);
+      const r = Math.min(4, w / 2, h);
       s += `<path d="M${x + 2},${y(0)} v${-(h - r)} q0,${-r} ${r},${-r} h${w - 2 * r} q${r},0 ${r},${r} v${h - r} z" fill="${d.pl === "1st" ? "var(--accent)" : "var(--faint)"}" />`;
-      s += `<rect class="hit" x="${x}" y="${T}" width="${bw}" height="${H - T - B}" fill="transparent" data-i="${i}"/>`;
+      s += `<rect class="hit" x="${x}" y="${TOP}" width="${bw}" height="${H - TOP - BOTTOM}" fill="transparent" data-i="${i}"/>`;
       if (i % every === 0)
-        s += `<text x="${x + bw / 2}" y="${H - B + 14}" text-anchor="middle">${esc(d.id)}</text>`;
+        s += `<text x="${x + bw / 2}" y="${H - BOTTOM + 14}" text-anchor="middle">${esc(d.id)}</text>`;
     });
-    s += `<line x1="${L}" x2="${W - R}" y1="${y(avg)}" y2="${y(avg)}" stroke="var(--fg)" stroke-width="1.5" stroke-dasharray="4 4"/><text x="${W - R}" y="${y(avg) - 5}" text-anchor="end" style="fill:var(--fg);font-weight:700">Average WR ${pct(avg)}</text>`;
+    s += `<line x1="${LEFT}" x2="${W - RIGHT}" y1="${y(avg)}" y2="${y(avg)}" stroke="var(--fg)" stroke-width="1.5" stroke-dasharray="4 4"/><text x="${W - RIGHT}" y="${y(avg) - 5}" text-anchor="end" style="fill:var(--fg);font-weight:700">Average WR ${pct(avg)}</text>`;
     return s + '</svg><div class="tip" hidden></div>';
   }
+
+  function podium(entries, borrowed) {
+    if (!entries.length) return '<p class="empty">Nada registrado ainda.</p>';
+    return `<div class="podium">${entries
+      .map(([k, n], i) => {
+        const c = CARD.get(k);
+        return `<div class="pc ${borrowed ? "borrow" : ""}"><div class="art">${cardImg(k)}<span class="rk">${i + 1}</span><span class="ct num">${n}×</span></div><div class="nm">${esc(c ? c.n : k.split("\n")[0])}${c ? `<small>${esc(c.t)}</small>` : ""}</div></div>`;
+      })
+      .join("")}</div>`;
+  }
+
   function viewResumo() {
     setNav("resumo");
-    const s = computeStats();
+    const s = L.computeStats(CAT.cms, DATA, counted);
     const empty = s.tot === 0 && !s.aces.length && !s.scores.length;
     const styleMax = Math.max(1, ...Object.values(s.styles));
-    const podium = (arr, borrow) =>
-      arr.length
-        ? `<div class="podium">${arr
-            .map(([k, n], i) => {
-              const c = CARD.get(k);
-              return `<div class="pc ${borrow ? "borrow" : ""}"><div class="art">${cardImg(k)}<span class="rk">${i + 1}</span><span class="ct num">${n}×</span></div><div class="nm">${esc(c ? c.n : k.split("\n")[0])}${c ? `<small>${esc(c.t)}</small>` : ""}</div></div>`;
-            })
-            .join("")}</div>`
-        : '<p class="empty">Nada registrado ainda.</p>';
     $("#app").innerHTML = `
-  ${importBanner()}
   ${currentHero()}
   ${empty ? `<div class="banner"><p>Nenhum resultado registrado ainda. Abra um PvP, monte seu time e marque a colocação para ver as estatísticas aqui.</p><a class="btn primary" href="#cms">Ver PvPs</a></div>` : ""}
   <section class="hero">
@@ -419,105 +268,118 @@
   </section>
   <section class="panel"><div class="label">Most Used Cards</div>${podium(s.cards, false)}</section>
   <section class="panel"><div class="label" style="color:var(--pink)">Most Borrowed Cards</div>${podium(s.borrow, true)}</section>`;
-    const ch = $("#chart"),
-      tip = ch && ch.querySelector(".tip");
-    if (tip)
-      ch.querySelectorAll(".hit").forEach((r) => {
-        const d = s.scores[+r.dataset.i];
-        const show = () => {
-          const box = ch.getBoundingClientRect(),
-            rb = r.getBoundingClientRect();
-          tip.hidden = false;
-          tip.textContent = `${d.id} · ${pct(d.sc)}${d.pl ? " · " + d.pl : ""}`;
-          tip.style.left = rb.left - box.left + rb.width / 2 + "px";
-          tip.style.top = rb.top - box.top + (1 - d.sc) * rb.height + "px";
-        };
-        r.addEventListener("mouseenter", show);
-        r.addEventListener("mouseleave", () => (tip.hidden = true));
-        r.addEventListener("click", () => (location.hash = "cm-" + d.id));
-        r.style.cursor = "pointer";
+
+    const chart = $("#chart");
+    const tip = chart && chart.querySelector(".tip");
+    if (!tip) return;
+    chart.querySelectorAll(".hit").forEach((bar) => {
+      const d = s.scores[+bar.dataset.i];
+      bar.style.cursor = "pointer";
+      bar.addEventListener("mouseenter", () => {
+        const box = chart.getBoundingClientRect();
+        const rb = bar.getBoundingClientRect();
+        tip.hidden = false;
+        tip.textContent = `${d.id} · ${pct(d.sc)}${d.pl ? " · " + d.pl : ""}`;
+        tip.style.left = rb.left - box.left + rb.width / 2 + "px";
+        tip.style.top = rb.top - box.top + (1 - d.sc) * rb.height + "px";
       });
-    bindImport();
-    bindSchedule();
+      bar.addEventListener("mouseleave", () => (tip.hidden = true));
+      bar.addEventListener("click", () => (location.hash = "cm-" + d.id));
+    });
   }
 
-  /* ---------- lista ---------- */
-  let listQ = "",
-    listF = "all";
+  /* ---------- lista de PvPs ---------- */
+  let listQuery = "";
+  let listFilter = "all";
+
+  function tileHtml(c) {
+    const d = DATA[c.id];
+    const team = d ? d.team.filter((t) => t.n) : [];
+    const ph = phase(c.id);
+    const title = c.nm && c.nm !== "League of Heroes" ? c.nm : c.sc;
+    let chips = "";
+    if (ph === "current")
+      chips += `<span class="chip cur">Current${CONF.date ? " · final " + fmtDate(CONF.date).slice(0, 5) : ""}</span>`;
+    if (ph === "future") chips += '<span class="chip none">Not counted</span>';
+    if (d && d.pl)
+      chips += `<span class="chip ${plClass(d.pl)}">${esc(d.pl)}</span>`;
+    else if (ph !== "future")
+      chips += `<span class="chip none">${team.length ? "No result" : "Empty"}</span>`;
+    return `<a class="tile ${ph === "future" ? "future" : ""} ${ph === "current" ? "current" : ""}" href="#cm-${esc(c.id)}">
+      <div class="top"><h2><span class="cmid ${isLoh(c.id) ? "loh" : ""}">${esc(c.id)}</span> <span class="sc">· ${esc(title)}</span></h2>${chips}</div>
+      <div class="ln num">${esc(c.tr)} · ${c.m || "?"}m · ${esc(c.su)} · ${esc(L.dist(c.m))}${c.dir ? " · " + esc(c.dir) : ""}</div>
+      <div class="cond"><b>${esc(c.sc)}</b>${cond(c) ? " · " + cond(c) : ""}</div>
+      <div class="faces">${team.map((t) => `<span class="face ${t.ro === "Debuffer" ? "debuff" : ""}" title="${esc(t.n)} · ${esc(t.ro)}">${charImg(t.n, true)}</span>`).join("")}</div>
+    </a>`;
+  }
+
   function viewList() {
     setNav("cms");
+    const q = listQuery.toLowerCase();
     const rows = CAT.cms.filter(
       (c) =>
-        (listF === "all" || (listF === "loh") === c.id.startsWith("LOH")) &&
-        (!listQ ||
-          [c.id, c.sc, c.tr, c.su, dist(c.m), c.m]
+        (listFilter === "all" || (listFilter === "loh") === isLoh(c.id)) &&
+        (!q ||
+          [c.id, c.nm, c.sc, c.tr, c.su, L.dist(c.m), c.m]
             .join(" ")
             .toLowerCase()
-            .includes(listQ.toLowerCase())),
+            .includes(q)),
     );
-    $("#app").innerHTML = `
-  ${importBanner()}
-  <section class="lhead"><h1>PvP</h1>
-    <div class="seg" role="group" aria-label="Tipo">${[
+    const filters = [
       ["all", "All"],
       ["cm", "CM"],
       ["loh", "LOH"],
     ]
       .map(
         ([k, t]) =>
-          `<button type="button" class="tog" data-f="${k}" aria-pressed="${listF === k}">${t}</button>`,
+          `<button type="button" class="tog" data-f="${k}" aria-pressed="${listFilter === k}">${t}</button>`,
       )
-      .join("")}</div>
-    <input class="search" id="lq" type="search" placeholder="Buscar por CM, cenário, pista, distância…" value="${esc(listQ)}"></section>
-  <section class="tiles">${
-    rows.length
-      ? rows
-          .map((c) => {
-            const d = DATA[c.id];
-            const team = d ? d.team.filter((t) => t.n) : [];
-            const ph = phase(c.id);
-            return `<a class="tile ${ph === "future" ? "future" : ""} ${ph === "current" ? "current" : ""}" href="#cm-${esc(c.id)}">
-      <div class="top"><h2><span class="cmid ${c.id.startsWith("LOH") ? "loh" : ""}">${esc(c.id)}</span> <span class="sc">· ${esc(c.nm && c.nm !== "League of Heroes" ? c.nm : c.sc)}</span></h2>${ph === "current" ? `<span class="chip cur">Current${CONF.date ? " · final " + fmtDate(CONF.date).slice(0, 5) : ""}</span>` : ph === "future" ? '<span class="chip none">Not counted</span>' : ""}${d && d.pl ? `<span class="chip ${plClass(d.pl)}">${esc(d.pl)}</span>` : ph === "future" ? "" : `<span class="chip none">${d && d.team.some((t) => t.n) ? "No result" : "Empty"}</span>`}</div>
-      <div class="ln num">${esc(c.tr)} · ${c.m || "?"}m · ${esc(c.su)} · ${esc(dist(c.m))}${c.dir ? " · " + esc(c.dir) : ""}</div>
-      <div class="cond"><b>${esc(c.sc)}</b>${cond(c) ? " · " + cond(c) : ""}</div>
-      <div class="faces">${team.map((t) => `<span class="face ${t.ro === "Debuffer" ? "debuff" : ""}" title="${esc(t.n)} · ${esc(t.ro || "")}">${charImg(t.n, true)}</span>`).join("")}</div>
-    </a>`;
-          })
-          .join("")
-      : '<p class="empty">Nenhum CM encontrado.</p>'
-  }</section>`;
-    const q = $("#lq");
-    q.addEventListener("input", () => {
-      listQ = q.value;
-      const pos = q.selectionStart;
+      .join("");
+    $("#app").innerHTML = `
+  <section class="lhead"><h1>PvP</h1>
+    <div class="seg" role="group" aria-label="Tipo">${filters}</div>
+    <input class="search" id="lq" type="search" placeholder="Buscar por CM, cenário, pista, distância…" value="${esc(listQuery)}"></section>
+  <section class="tiles">${rows.length ? rows.map(tileHtml).join("") : '<p class="empty">Nenhum PvP encontrado.</p>'}</section>`;
+
+    const input = $("#lq");
+    input.addEventListener("input", () => {
+      listQuery = input.value;
+      const pos = input.selectionStart;
       viewList();
-      const n = $("#lq");
-      n.focus();
-      n.setSelectionRange(pos, pos);
+      const again = $("#lq");
+      again.focus();
+      again.setSelectionRange(pos, pos);
     });
     document.querySelectorAll("[data-f]").forEach((b) =>
       b.addEventListener("click", () => {
-        listF = b.dataset.f;
+        listFilter = b.dataset.f;
         viewList();
       }),
     );
-    bindImport();
   }
 
-  /* ---------- detalhe ---------- */
+  /* ---------- página de um PvP ---------- */
+  function currentNote(id) {
+    const ph = phase(id);
+    if (ph === "current")
+      return `<div class="banner sched"><p><b>Current CM.</b> ${finalPassed() ? "A final já passou e ele já conta nas estatísticas." : `Entra nas estatísticas depois da final${CONF.date ? ` (${fmtDate(CONF.date)})` : ""}.`}</p></div>`;
+    if (ph === "future")
+      return `<div class="banner sched"><p>Este PvP vem depois do Current CM (${esc(CONF.cur)}), então o que você montar aqui ainda não conta nas estatísticas.</p></div>`;
+    return "";
+  }
+
   function viewCM(id) {
     setNav("cms");
-    const cm = CAT.cms.find((c) => c.id === id);
-    const i = CAT.cms.indexOf(cm);
-    const d = get(id);
-    const sc = ratingScore(d.rat);
-    const prev = CAT.cms[i - 1],
-      next = CAT.cms[i + 1];
-    const ro = !canWrite ? "disabled" : "";
-    $("#app").innerHTML = `
-  <section class="cmhead">
-    <div><div class="label">${esc(cm.sc)}${cm.nm ? " · " + esc(cm.nm) : ""}</div><h1 class="cmid ${id.startsWith("LOH") ? "loh" : ""}">${esc(id)}</h1></div>
-    <div class="meta"><span class="chip">${esc(cm.tr)}</span><span class="chip">${cm.m || "?"}m</span><span class="chip">${esc(cm.su)}</span><span class="chip">${esc(dist(cm.m))}</span>${[
+    const cm = CM_BY_ID.get(id);
+    const d = record(id);
+    const sc = L.ratingScore(d.rat);
+    const prev = CAT.cms[cm.i - 1];
+    const next = CAT.cms[cm.i + 1];
+    const meta = [
+      cm.tr,
+      `${cm.m || "?"}m`,
+      cm.su,
+      L.dist(cm.m),
       cm.dir,
       cm.se,
       cm.we,
@@ -525,106 +387,94 @@
     ]
       .filter(Boolean)
       .map((x) => `<span class="chip">${esc(x)}</span>`)
-      .join("")}</div>
+      .join("");
+    $("#app").innerHTML = `
+  <section class="cmhead">
+    <div><div class="label">${esc(cm.sc)}${cm.nm ? " · " + esc(cm.nm) : ""}</div><h1 class="cmid ${isLoh(id) ? "loh" : ""}">${esc(id)}</h1></div>
+    <div class="meta">${meta}</div>
     <div class="nav2">${prev ? `<a class="btn" href="#cm-${esc(prev.id)}">← ${esc(prev.id)}</a>` : ""}<a class="btn" href="#cms">All PvP</a>${next ? `<a class="btn" href="#cm-${esc(next.id)}">${esc(next.id)} →</a>` : ""}</div>
   </section>
-  ${currentPanel(id)}
+  ${currentNote(id)}
   <section class="result">
     <div class="panel"><div class="label">Final placement</div>
-      <div class="places" role="group" aria-label="Final placement">${[...PLACES, ""].map((p) => `<button type="button" ${ro} class="p-${p ? p.replace(" ", "") : "none"}" data-pl="${p}" aria-pressed="${d.pl === p}">${p || "No result"}</button>`).join("")}</div>
+      <div class="places" role="group" aria-label="Final placement">${[...PLACES, ""].map((p) => `<button type="button" class="p-${p ? p.replace(" ", "") : "none"}" data-pl="${p}" aria-pressed="${d.pl === p}">${p || "No result"}</button>`).join("")}</div>
     </div>
     <div class="panel"><div class="label">Round WR <span style="text-transform:none;letter-spacing:0;font-weight:500">· quatro números de 0 a 5, ex.: 4-5-4-4</span></div>
-      <div class="rats">${d.rat.map((r, k) => `<input id="rat-${k}" ${ro} inputmode="numeric" placeholder="Round ${k + 1}" value="${esc(r)}" aria-label="Round ${k + 1}">`).join("")}</div>
+      <div class="rats">${d.rat.map((r, k) => `<input id="rat-${k}" inputmode="numeric" placeholder="Round ${k + 1}" value="${esc(r)}" aria-label="Round ${k + 1}">`).join("")}</div>
       <div class="score"><b class="num" id="score">${sc ? pct(sc) : "–"}</b><span style="color:var(--muted)">WR</span></div>
     </div>
   </section>
-  <section class="team">${d.team.map((t, k) => runnerHTML(t, k, ro)).join("")}</section>`;
-    document.querySelectorAll("[data-pl]").forEach((b) =>
-      b.addEventListener("click", () => {
-        d.pl = b.dataset.pl;
-        save(id);
-        viewCM(id);
-      }),
-    );
+  <section class="team">${d.team.map(runnerHtml).join("")}</section>`;
+
+    const change = (fn, rerender = true) => {
+      fn();
+      save();
+      if (rerender) viewCM(id);
+    };
+    document
+      .querySelectorAll("[data-pl]")
+      .forEach((b) =>
+        b.addEventListener("click", () => change(() => (d.pl = b.dataset.pl))),
+      );
     d.rat.forEach((_, k) => {
-      const inp = $("#rat-" + k);
-      inp.addEventListener("input", () => {
-        const v = inp.value.trim();
-        inp.classList.toggle("bad", !!v && !/^\d(-\d){0,3}$/.test(v));
-        d.rat[k] = v;
-        const s = ratingScore(d.rat);
+      const input = $("#rat-" + k);
+      input.addEventListener("input", () => {
+        const v = input.value.trim();
+        input.classList.toggle("bad", !L.isValidRound(v));
+        change(() => (d.rat[k] = v), false);
+        const s = L.ratingScore(d.rat);
         $("#score").textContent = s ? pct(s) : "–";
-        save(id);
       });
     });
     d.team.forEach((t, k) => {
-      const r = document.querySelector(`.runner[data-k="${k}"]`);
-      const pickMain = () =>
-        openPicker(
-          "char",
-          t.n,
-          (v) => {
-            t.n = v;
-            save(id);
-            viewCM(id);
-          },
-          `Uma ${k + 1}`,
+      const card = document.querySelector(`.runner[data-k="${k}"]`);
+      const pickUma = () =>
+        openPicker("char", t.n, `Uma ${k + 1}`, (v) => change(() => (t.n = v)));
+      card.querySelector(".main").addEventListener("click", pickUma);
+      card.querySelector(".rname").addEventListener("click", pickUma);
+      card
+        .querySelector("[name=ro]")
+        .addEventListener("change", (e) =>
+          change(() => (t.ro = e.target.value)),
         );
-      r.querySelector(".main").addEventListener("click", pickMain);
-      r.querySelector(".rname").addEventListener("click", pickMain);
-      r.querySelector("[name=ro]").addEventListener("change", (e) => {
-        t.ro = e.target.value;
-        save(id);
-        viewCM(id);
+      card
+        .querySelector("[name=st]")
+        .addEventListener("change", (e) =>
+          change(() => (t.st = e.target.value || null), false),
+        );
+      const wins = card.querySelector("[name=w]");
+      wins.addEventListener("input", () => {
+        const v = parseInt(wins.value, 10);
+        change(() => (t.w = isNaN(v) ? null : v), false);
+        card.querySelector(".wrp").textContent =
+          t.w != null ? pct(t.w / L.WINS_TOTAL) : "";
       });
-      r.querySelector("[name=st]").addEventListener("change", (e) => {
-        t.st = e.target.value || null;
-        save(id);
-      });
-      const w = r.querySelector("[name=w]");
-      w.addEventListener("input", () => {
-        const v = parseInt(w.value, 10);
-        t.w = isNaN(v) ? null : v;
-        r.querySelector(".wrp").textContent = t.w != null ? pct(t.w / 80) : "";
-        save(id);
-      });
-      r.querySelectorAll("[data-p]").forEach((b) =>
+      card.querySelectorAll("[data-p]").forEach((b) =>
         b.addEventListener("click", () => {
           const j = +b.dataset.p;
           openPicker(
             "char",
             t.p[j],
-            (v) => {
-              t.p[j] = v;
-              save(id);
-              viewCM(id);
-            },
             `${PAR[j]} · ${t.n || "Uma " + (k + 1)}`,
+            (v) => change(() => (t.p[j] = v)),
           );
         }),
       );
-      r.querySelectorAll("[data-d]").forEach((b) =>
+      card.querySelectorAll("[data-d]").forEach((b) =>
         b.addEventListener("click", () => {
           const j = +b.dataset.d;
-          openPicker(
-            "card",
-            t.d[j],
-            (v) => {
-              t.d[j] = v;
-              save(id);
-              viewCM(id);
-            },
-            j === 5 ? "Borrowed card" : `Support card ${j + 1}`,
-          );
+          const title =
+            j === L.BORROWED_SLOT ? "Borrowed card" : `Support card ${j + 1}`;
+          openPicker("card", t.d[j], title, (v) => change(() => (t.d[j] = v)));
         }),
       );
     });
-    bindCurrent(id);
   }
-  function runnerHTML(t, k, ro) {
+
+  function runnerHtml(t, k) {
     const slot = (cls, inner, attrs, label, empty, extra = "") =>
-      `<button type="button" ${ro} class="slot ${cls} ${inner ? "filled" : ""}" ${attrs} aria-label="${esc(label)}" title="${esc(label)}">${inner || empty}${extra}</button>`;
-    const ps = (j) =>
+      `<button type="button" class="slot ${cls} ${inner ? "filled" : ""}" ${attrs} aria-label="${esc(label)}" title="${esc(label)}">${inner || empty}${extra}</button>`;
+    const parent = (j) =>
       slot(
         j === 0 || j === 3 ? "par" : "gp",
         t.p[j] ? charImg(t.p[j]) : "",
@@ -632,204 +482,136 @@
         `${PAR[j]}: ${t.p[j] || "empty"}`,
         PAR[j],
       );
+    const deck = t.d
+      .map((c, j) => {
+        const borrowed = j === L.BORROWED_SLOT;
+        return slot(
+          borrowed ? "borrow" : "",
+          c ? cardImg(c) : "",
+          `data-d="${j}"`,
+          `${borrowed ? "Borrowed card" : "Card " + (j + 1)}: ${c ? c.replace("\n", " ") : "empty"}`,
+          borrowed ? "" : "+",
+          borrowed ? '<span class="tag">BORROW</span>' : "",
+        );
+      })
+      .join("");
+    const winsPct = t.w != null ? pct(t.w / L.WINS_TOTAL) : "";
     return `<article class="panel runner ${t.ro === "Debuffer" ? "debuff" : ""}" data-k="${k}">
     <div class="rtop">${slot("main", t.n ? charImg(t.n, true) : "", "", t.n ? `Change ${t.n}` : "Choose Uma", '<span class="plus">+</span>')}
-      <div><button type="button" class="rname" ${ro}>${t.n ? esc(t.n) : `<span style="color:var(--muted)">Uma ${k + 1}</span>`}</button>
+      <div><button type="button" class="rname">${t.n ? esc(t.n) : `<span style="color:var(--muted)">Uma ${k + 1}</span>`}</button>
         <div class="fields">
-          <label class="nolab"><select name="ro" ${ro} aria-label="Ace ou Debuffer">${ROLES.map((r) => `<option ${t.ro === r ? "selected" : ""}>${r}</option>`).join("")}</select></label>
-          <label class="nolab"><select name="st" ${ro} aria-label="Style"><option value="">Style —</option>${STYLES.map((s) => `<option ${t.st === s ? "selected" : ""}>${s}</option>`).join("")}</select></label>
-          <label>Wins<span class="wins"><input name="w" ${ro} type="number" min="0" max="80" inputmode="numeric" value="${t.w ?? ""}" aria-label="Wins (de 80)"><span class="num wrp" style="color:var(--muted)">${t.w != null ? pct(t.w / 80) : ""}</span></span></label>
+          <label class="nolab"><select name="ro" aria-label="Ace ou Debuffer">${ROLES.map((r) => `<option ${t.ro === r ? "selected" : ""}>${r}</option>`).join("")}</select></label>
+          <label class="nolab"><select name="st" aria-label="Style"><option value="">Style —</option>${STYLES.map((s) => `<option ${t.st === s ? "selected" : ""}>${s}</option>`).join("")}</select></label>
+          <label>Wins<span class="wins"><input name="w" type="number" min="0" max="${L.WINS_TOTAL}" inputmode="numeric" value="${t.w ?? ""}" aria-label="Wins (de ${L.WINS_TOTAL})"><span class="num wrp" style="color:var(--muted)">${winsPct}</span></span></label>
         </div></div></div>
     <div class="lower">
       <div><div class="label">Parents</div>
         <div class="tree">
           <span class="apex">${t.n ? charImg(t.n) : '<span class="ph">?</span>'}</span>
-          ${ps(0)}${ps(3)}
-          ${ps(1)}${ps(2)}${ps(4)}${ps(5)}
+          ${parent(0)}${parent(3)}
+          ${parent(1)}${parent(2)}${parent(4)}${parent(5)}
         </div></div>
-      <div><div class="label">Deck</div>
-        <div class="deck">${t.d.map((c, j) => slot(j === 5 ? "borrow" : "", c ? cardImg(c) : "", `data-d="${j}"`, `${j === 5 ? "Borrowed card" : "Card " + (j + 1)}: ${c ? c.replace("\n", " ") : "empty"}`, j === 5 ? "" : "+", j === 5 ? '<span class="tag">BORROW</span>' : "")).join("")}</div></div>
+      <div><div class="label">Deck</div><div class="deck">${deck}</div></div>
     </div>
   </article>`;
   }
 
-  /* ---------- seletor ---------- */
-  let pk = null;
-  const pkState = { q: "", rar: new Set(), ty: new Set() };
-  function openPicker(kind, current, onPick, title) {
-    pk = { kind, onPick };
-    pkState.q = "";
+  /* ---------- seletor de Uma / carta ---------- */
+  let picker = null;
+  const pickerState = { q: "", rarity: new Set(), type: new Set() };
+
+  function openPicker(kind, current, title, onPick) {
+    picker = { kind, onPick };
+    pickerState.q = "";
     $("#pk-q").value = "";
     $("#pk-title").textContent = title;
     $("#pk-remove").hidden = !current;
-    $("#pk-fil").innerHTML =
+    const fil = $("#pk-fil");
+    fil.hidden = kind !== "card";
+    fil.innerHTML =
       kind === "card"
         ? ["SSR", "SR"]
             .map(
               (r) =>
-                `<button type="button" class="tog" data-rar="${r}" aria-pressed="${pkState.rar.has(r)}">${r}</button>`,
+                `<button type="button" class="tog" data-rar="${r}" aria-pressed="${pickerState.rarity.has(r)}">${r}</button>`,
             )
             .join("") +
           '<span style="width:8px"></span>' +
           TYPES.map(
             (t) =>
-              `<button type="button" class="tog" data-ty="${t}" aria-pressed="${pkState.ty.has(t)}"><span class="ty" style="background:${typeVar(t)}"></span>${t}</button>`,
+              `<button type="button" class="tog" data-ty="${t}" aria-pressed="${pickerState.type.has(t)}"><span class="ty" style="background:${typeVar(t)}"></span>${t}</button>`,
           ).join("")
         : "";
-    $("#pk-fil").hidden = kind !== "card";
-    $("#pk-fil")
-      .querySelectorAll(".tog")
-      .forEach((b) =>
-        b.addEventListener("click", () => {
-          const set = b.dataset.rar ? pkState.rar : pkState.ty;
-          const v = b.dataset.rar || b.dataset.ty;
-          set.has(v) ? set.delete(v) : set.add(v);
-          b.setAttribute("aria-pressed", set.has(v));
-          renderPick();
-        }),
-      );
-    renderPick();
+    fil.querySelectorAll(".tog").forEach((b) =>
+      b.addEventListener("click", () => {
+        const set = b.dataset.rar ? pickerState.rarity : pickerState.type;
+        const v = b.dataset.rar || b.dataset.ty;
+        set.has(v) ? set.delete(v) : set.add(v);
+        b.setAttribute("aria-pressed", set.has(v));
+        renderPicker();
+      }),
+    );
+    renderPicker();
     $("#picker").showModal();
     $("#pk-q").focus();
   }
-  function renderPick() {
-    const q = pkState.q.toLowerCase();
-    const L = $("#pk-list");
-    L.classList.toggle("cards", pk.kind === "card");
-    let items;
-    if (pk.kind === "char")
-      items = CAT.chars
-        .filter((c) => !q || c.n.toLowerCase().includes(q))
-        .map(
-          (c) =>
-            `<button type="button" data-v="${esc(c.n)}"><span class="im">${charImg(c.n)}</span><span>${esc(c.n)}</span></button>`,
-        );
-    else
-      items = CAT.cards
-        .filter(
-          (c) =>
-            (!q || (c.n + " " + c.t).toLowerCase().includes(q)) &&
-            (!pkState.rar.size || pkState.rar.has(c.r)) &&
-            (!pkState.ty.size || pkState.ty.has(c.ty)),
-        )
-        .map(
-          (c) =>
-            `<button type="button" data-v="${esc(c.k)}"><span class="im">${cardImg(c.k)}</span><span><b>${esc(c.n)}</b><br><small>${esc(c.t)}</small><br><small><span class="ty" style="background:${typeVar(c.ty)}"></span>${esc(c.ty)} · ${esc(c.r)}</small></span></button>`,
-        );
-    L.innerHTML = items.length
+
+  function renderPicker() {
+    const q = pickerState.q.toLowerCase();
+    const list = $("#pk-list");
+    list.classList.toggle("cards", picker.kind === "card");
+    const items =
+      picker.kind === "char"
+        ? CAT.chars
+            .filter((c) => !q || c.n.toLowerCase().includes(q))
+            .map(
+              (c) =>
+                `<button type="button" data-v="${esc(c.n)}"><span class="im">${charImg(c.n)}</span><span>${esc(c.n)}</span></button>`,
+            )
+        : CAT.cards
+            .filter(
+              (c) =>
+                (!q || (c.n + " " + c.t).toLowerCase().includes(q)) &&
+                (!pickerState.rarity.size || pickerState.rarity.has(c.r)) &&
+                (!pickerState.type.size || pickerState.type.has(c.ty)),
+            )
+            .map(
+              (c) =>
+                `<button type="button" data-v="${esc(c.k)}"><span class="im">${cardImg(c.k)}</span><span><b>${esc(c.n)}</b><br><small>${esc(c.t)}</small><br><small><span class="ty" style="background:${typeVar(c.ty)}"></span>${esc(c.ty)} · ${esc(c.r)}</small></span></button>`,
+            );
+    list.innerHTML = items.length
       ? items.join("")
       : '<p class="empty">Nada encontrado com esse filtro.</p>';
-    L.querySelectorAll("button").forEach((b) =>
-      b.addEventListener("click", () => {
-        const f = pk.onPick;
-        $("#picker").close();
-        f(b.dataset.v);
-      }),
-    );
+    list
+      .querySelectorAll("button")
+      .forEach((b) => b.addEventListener("click", () => pick(b.dataset.v)));
   }
+
+  function pick(value) {
+    const done = picker.onPick;
+    $("#picker").close();
+    done(value);
+  }
+
   $("#pk-q").addEventListener("input", (e) => {
-    pkState.q = e.target.value;
-    renderPick();
+    pickerState.q = e.target.value;
+    renderPicker();
   });
   $("#pk-close").addEventListener("click", () => $("#picker").close());
-  $("#pk-remove").addEventListener("click", () => {
-    const f = pk.onPick;
-    $("#picker").close();
-    f(null);
-  });
+  $("#pk-remove").addEventListener("click", () => pick(null));
   $("#picker").addEventListener("click", (e) => {
     if (e.target === $("#picker")) $("#picker").close();
   });
 
-  /* ---------- salvar ---------- */
-  const LSKEY = "cmcomps:data:v1";
-  const status = (t, err) => {
-    const s = $("#status");
-    s.textContent = t;
-    s.classList.toggle("err", !!err);
-  };
-  function save(id) {
-    if (!db || !uid || !canWrite) {
-      status(
-        !canWrite
-          ? "Somente leitura"
-          : "Sem conexão: as mudanças não estão sendo salvas",
-        true,
-      );
-      return;
-    }
-    status("Salvando…");
-    clearTimeout(timers.get(id));
-    timers.set(
-      id,
-      setTimeout(() => flush(id), 700),
-    );
-  }
-  const writing = new Map();
-  async function flush(id) {
-    timers.delete(id);
-    const prev = writing.get(id) || Promise.resolve();
-    const p = prev.then(async () => {
-      try {
-        localStorage.setItem(LSKEY, JSON.stringify(DATA));
-        if (!timers.size) status("Salvo neste navegador");
-      } catch (e) {
-        status(
-          "Este navegador não deixou salvar. Use “Baixar backup” para não perder seus dados.",
-          true,
-        );
-      }
-    });
-    writing.set(id, p);
-    await p;
-  }
-
-  /* ---------- importação (só o dono) ---------- */
-  function bindImport() {
-    const b = $("#do-import");
-    if (!b) return;
-    b.addEventListener("click", async () => {
-      b.disabled = true;
-      b.textContent = "Importando…";
-      try {
-        const seed = await (await fetch("seed.json")).json();
-        const ids = Object.keys(seed);
-        let n = 0;
-        for (const id of ids) {
-          DATA[id] = seed[id];
-          await db
-            .collection("data/users/" + uid)
-            .doc("cm_" + id)
-            .set(seed[id]);
-          n++;
-          b.textContent = `Importando… ${n}/${ids.length}`;
-        }
-        status("Planilha importada");
-        route();
-      } catch (e) {
-        b.disabled = false;
-        b.textContent = "Tentar de novo";
-        status("A importação parou no meio. Clique em “Tentar de novo”.", true);
-      }
-    });
-  }
-
   /* ---------- backup ---------- */
   $("#bk-down").addEventListener("click", () => {
-    const blob = new Blob(
-      [
-        JSON.stringify(
-          { app: "cmcomps", v: 1, saved: new Date().toISOString(), data: DATA },
-          null,
-          1,
-        ),
-      ],
-      { type: "application/json" },
-    );
+    if (saveTimer) flush();
+    const blob = new Blob([JSON.stringify(L.makeBackup(DATA), null, 1)], {
+      type: "application/json",
+    });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download =
-      "cmcomps-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+    a.download = `cmcomps-backup-${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(a);
     a.click();
     setTimeout(() => {
@@ -837,65 +619,57 @@
       a.remove();
     }, 500);
   });
+
   $("#bk-file").addEventListener("change", async (e) => {
-    const f = e.target.files[0];
+    const file = e.target.files[0];
     e.target.value = "";
-    if (!f) return;
+    if (!file) return;
     try {
-      const j = JSON.parse(await f.text());
-      const d = j && j.app === "cmcomps" ? j.data : null;
-      if (!d || typeof d !== "object") throw 0;
-      const n = Object.keys(d).length;
+      const data = L.parseBackup(await file.text());
+      const n = Object.keys(data).length;
+      const hasData = Object.keys(L.serialize(DATA).data).length > 0;
       if (
-        Object.keys(DATA).length &&
+        hasData &&
         !confirm(
           `Carregar este backup (${n} PvPs)? Ele substitui o que está salvo neste navegador.`,
         )
       )
         return;
-      DATA = d;
-      localStorage.setItem(LSKEY, JSON.stringify(DATA));
+      DATA = data;
+      flush();
       status(`Backup carregado: ${n} PvPs`);
       route();
-    } catch (_) {
-      status("Esse arquivo não é um backup do CM Comps.", true);
+    } catch (err) {
+      status(err.message, true);
     }
   });
 
-  /* ---------- início ---------- */
-  const HIST = [];
-  let lastHash = location.hash,
-    skipPush = false;
+  /* ---------- botão voltar ---------- */
+  const backStack = [];
+  let lastHash = location.hash;
+  let goingBack = false;
   $("#back").addEventListener("click", () => {
-    if (HIST.length) {
-      skipPush = true;
-      location.hash = HIST.pop() || "resumo";
-    } else location.hash = location.hash.startsWith("#cm-") ? "cms" : "resumo";
+    if (backStack.length) {
+      goingBack = true;
+      location.hash = backStack.pop() || "resumo";
+    } else location.hash = "cms";
   });
   window.addEventListener("hashchange", () => {
-    if (!skipPush && lastHash !== location.hash) HIST.push(lastHash);
-    skipPush = false;
+    if (!goingBack && lastHash !== location.hash) backStack.push(lastHash);
+    goingBack = false;
     lastHash = location.hash;
     if ($("#picker").open) $("#picker").close();
     window.scrollTo(0, 0);
     route();
   });
-  route();
-  (() => {
-    CONF = window.CM_CONFIG;
-    try {
-      const raw = localStorage.getItem(LSKEY);
-      if (raw) DATA = JSON.parse(raw) || {};
-    } catch (e) {
-      status(
-        "Este navegador está bloqueando o salvamento (aba anônima?)",
-        true,
-      );
-    }
-    db = "local";
-    uid = "local";
-    owner = false;
+
+  /* ---------- início ---------- */
+  DATA = load();
+  if (!$("#status").classList.contains("err"))
     status(Object.keys(DATA).length ? "Salvo neste navegador" : "Pronto");
-    route();
-  })();
+  route();
+
+  // PWA: permite instalar e abrir sem internet (só em http/https)
+  if ("serviceWorker" in navigator && location.protocol.startsWith("http"))
+    navigator.serviceWorker.register("sw.js").catch(() => {});
 })();

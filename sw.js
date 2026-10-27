@@ -1,0 +1,85 @@
+/*
+ * CM Comps — service worker (PWA).
+ *
+ * - Código e dados (html, js, css, json): busca a versão nova primeiro e
+ *   usa a cópia guardada só quando estiver sem internet. Assim as
+ *   atualizações chegam na hora.
+ * - Imagens (sp/, icons/, og.png): usa a cópia guardada primeiro, porque
+ *   quase nunca mudam e são o que mais pesa.
+ *
+ * Suba CACHE quando quiser forçar todos a baixarem tudo de novo.
+ */
+const CACHE = "cmcomps-v1";
+const CORE = [
+  "./",
+  "index.html",
+  "style.css",
+  "data.js",
+  "logic.js",
+  "app.js",
+  "manifest.webmanifest",
+  "icons/favicon.svg",
+  "icons/icon-192.png",
+];
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches
+      .open(CACHE)
+      .then((cache) => cache.addAll(CORE))
+      .then(() => self.skipWaiting()),
+  );
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)),
+        ),
+      )
+      .then(() => self.clients.claim()),
+  );
+});
+
+const isImage = (url) =>
+  /\/(sp|icons)\//.test(url.pathname) || url.pathname.endsWith("og.png");
+
+self.addEventListener("fetch", (event) => {
+  const req = event.request;
+  const url = new URL(req.url);
+  if (req.method !== "GET" || url.origin !== self.location.origin) return;
+
+  if (isImage(url)) {
+    event.respondWith(
+      caches.match(req).then(
+        (hit) =>
+          hit ||
+          fetch(req).then((res) => {
+            if (res.ok) {
+              const copy = res.clone();
+              caches.open(CACHE).then((cache) => cache.put(req, copy));
+            }
+            return res;
+          }),
+      ),
+    );
+    return;
+  }
+
+  event.respondWith(
+    fetch(req)
+      .then((res) => {
+        if (res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then((cache) => cache.put(req, copy));
+        }
+        return res;
+      })
+      .catch(() =>
+        caches.match(req).then((hit) => hit || caches.match("index.html")),
+      ),
+  );
+});

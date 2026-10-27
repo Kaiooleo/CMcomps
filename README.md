@@ -1,19 +1,40 @@
 # CM Comps
 
-Site para montar e acompanhar times de Champions Meeting e League of Heroes (Uma Musume).
+Site para montar e acompanhar times de Champions Meeting e League of Heroes de Uma Musume.
 
-- Abra `index.html` (ou o link do GitHub Pages).
-- Os times ficam salvos no navegador de cada pessoa. Use **Baixar backup** / **Carregar backup** no rodapé para levar os dados para outro aparelho.
-- O Current CM e a data da final ficam no próprio `index.html` (bloco `cmconfig`).
+**Site:** https://kaiooleo.github.io/CMcomps/
+
+- Cada pessoa salva os próprios times **no navegador**. O rodapé tem **Baixar backup** e **Carregar backup** para levar os dados para outro aparelho.
+- Dá para **instalar como app** no celular ou computador (o navegador oferece "Instalar" / "Adicionar à tela inicial"), e ele abre mesmo sem internet.
+- O **Current CM** e a data da final ficam em `data.js` (`window.CM_CONFIG`). PvPs depois dele não entram nas estatísticas, e ele mesmo só entra depois da final.
 
 ## Arquivos
 
-| Arquivo | O que tem |
-|---|---|
-| `index.html` | Estrutura da página |
-| `style.css` | Visual (cores, layout, tema claro/escuro) |
-| `app.js` | Funcionamento: telas, seletor, estatísticas, salvar e backup |
-| `data.js` | Dados: Current CM, PvPs, personagens e cartas (não formatado de propósito) |
-| `sp/` | Imagens das Umas e cartas agrupadas em folhas |
+| Arquivo                | O que tem                                                                         |
+| ---------------------- | --------------------------------------------------------------------------------- |
+| `index.html`           | Estrutura da página, prévia do link e ícones                                      |
+| `style.css`            | Visual (cores, layout, tema claro/escuro)                                         |
+| `logic.js`             | Regras e cálculos: WR, o que conta, estatísticas, formato dos dados e backup      |
+| `app.js`               | Telas e interação: Resumo, lista de PvPs, página do PvP, seletor, salvar e backup |
+| `data.js`              | Current CM, PvPs, personagens e cartas (não formatado de propósito)               |
+| `sp/`                  | Imagens das Umas e cartas agrupadas em folhas                                     |
+| `sw.js`                | Service worker: permite instalar e abrir sem internet                             |
+| `manifest.webmanifest` | Nome, cores e ícones do app instalado                                             |
+| `icons/`, `og.png`     | Ícones e imagem da prévia do link (Discord etc.)                                  |
+| `tests/`               | Testes automáticos                                                                |
 
-O código é formatado com [Prettier](https://prettier.io): `npx prettier --write .`
+## Formato dos dados salvos
+
+O navegador guarda `{ "v": 1, "data": { "CM1": {...}, ... } }` na chave `cmcomps:data`; o backup é igual, com `"app": "cmcomps"`.
+Quando a estrutura mudar, aumente `SCHEMA` em `logic.js` e trate a conversão em `migrate()`: dados e backups antigos são convertidos sozinhos ao abrir.
+
+## Desenvolvimento
+
+```sh
+npm install
+npx playwright install chromium
+npm test              # testes dos cálculos + teste do site no navegador
+npm run format        # formata com Prettier
+```
+
+A cada envio para o GitHub, o **GitHub Actions** (`.github/workflows/ci.yml`) confere a formatação e roda os testes. Se algo falhar, o commit fica com um X vermelho.

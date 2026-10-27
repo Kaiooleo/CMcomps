@@ -1,0 +1,193 @@
+// Testes das regras e cálculos (logic.js). Rodar: npm run test:unit
+const { test } = require("node:test");
+const assert = require("node:assert/strict");
+const L = require("../logic.js");
+
+const CMS = [{ id: "CM1" }, { id: "CM2" }, { id: "LOH1" }, { id: "CM3" }];
+const day = (s) => new Date(s + "T12:00:00");
+
+test("distância segue as faixas da planilha", () => {
+  assert.equal(L.dist(1200), "Sprint");
+  assert.equal(L.dist(1400), "Sprint");
+  assert.equal(L.dist(1401), "Mile");
+  assert.equal(L.dist(1999), "Mile");
+  assert.equal(L.dist(2000), "Medium");
+  assert.equal(L.dist(2400), "Medium");
+  assert.equal(L.dist(2401), "Long");
+  assert.equal(L.dist(null), "");
+});
+
+test("WR das rodadas: soma ÷ (rodadas preenchidas × 20)", () => {
+  assert.equal(L.ratingScore(["4-5-4-4", "", "", ""]), 17 / 20);
+  assert.equal(L.ratingScore(["5-5-5-5", "5-5-5-5"]), 1);
+  // mesmos números do CM20 da planilha
+  assert.equal(
+    L.ratingScore(["4-4-5-4", "5-5-5-5", "4-5-4-5", "2-3-1-4"]),
+    65 / 80,
+  );
+  assert.equal(L.ratingScore(["", "", "", ""]), 0);
+  assert.equal(L.ratingScore(undefined), 0);
+});
+
+test("rodada válida: até quatro notas de 0 a 5", () => {
+  for (const ok of ["", "4", "4-5", "4-5-4-4", "0-0-0-0"])
+    assert.ok(L.isValidRound(ok), ok);
+  for (const bad of ["6-5-4-4", "4-5-4-4-4", "4--5", "abc", "45"])
+    assert.ok(!L.isValidRound(bad), bad);
+});
+
+test("sem Current CM, todos os PvPs contam", () => {
+  const conf = { cur: null, date: null };
+  for (const c of CMS) assert.ok(L.counted(CMS, conf, c.id));
+});
+
+test("Current CM: anteriores contam, ele só depois da final, seguintes nunca", () => {
+  const conf = { cur: "CM2", date: "2026-11-06" };
+  const before = day("2026-11-06");
+  const after = day("2026-11-07");
+  assert.equal(L.phase(CMS, conf, "CM1"), "past");
+  assert.equal(L.phase(CMS, conf, "CM2"), "current");
+  assert.equal(L.phase(CMS, conf, "LOH1"), "future");
+
+  assert.ok(L.counted(CMS, conf, "CM1", before));
+  assert.ok(!L.counted(CMS, conf, "CM2", before), "atual antes da final");
+  assert.ok(L.counted(CMS, conf, "CM2", after), "atual depois da final");
+  assert.ok(!L.counted(CMS, conf, "LOH1", after), "seguinte nunca conta");
+  assert.ok(!L.counted(CMS, conf, "CM3", after));
+});
+
+test("data inválida (ex.: ano 0002) nunca conta como final concluída", () => {
+  const conf = { cur: "CM2", date: "0002-11-06" };
+  assert.ok(!L.finalPassed(conf, day("2026-12-01")));
+  assert.equal(L.daysToFinal(conf), null);
+  assert.equal(
+    L.daysToFinal({ cur: "CM2", date: "2026-11-06" }, day("2026-11-04")),
+    3,
+  );
+});
+
+function rec(over) {
+  return { ...L.blankRecord(), ...over };
+}
+function uma(n, ro, st, deck) {
+  return {
+    n,
+    ro,
+    st,
+    w: null,
+    p: Array(6).fill(null),
+    d: deck || Array(6).fill(null),
+  };
+}
+
+test("estatísticas: colocações, WR, Aces e cartas (Debuffers ficam de fora)", () => {
+  const data = {
+    CM1: rec({
+      pl: "1st",
+      rat: ["5-5-5-5", "", "", ""],
+      team: [
+        uma("Oguri Cap", "Ace", "Pace Chaser", ["A", "B", "C", "D", "E", "X"]),
+        uma("Nice Nature", "Debuffer", "Late Surger", [
+          "A",
+          "A",
+          "A",
+          "A",
+          "A",
+          "Y",
+        ]),
+        uma(null, "Ace", null),
+      ],
+    }),
+    CM2: rec({
+      pl: "2nd",
+      rat: ["2-2-2-2", "", "", ""],
+      team: [
+        uma("Oguri Cap", "Ace", "Pace Chaser", [
+          "A",
+          "B",
+          null,
+          null,
+          null,
+          "X",
+        ]),
+        uma("Gold Ship", "Ace", "End Closer"),
+        uma(null, "Ace", null),
+      ],
+    }),
+  };
+  const s = L.computeStats(CMS, data);
+  assert.equal(s.tot, 2);
+  assert.equal(s.wr, 0.5);
+  assert.deepEqual(s.pl, { "1st": 1, "2nd": 1, "3rd": 0, "B 1st": 0 });
+  assert.deepEqual(s.aces, [
+    ["Oguri Cap", 2],
+    ["Gold Ship", 1],
+  ]);
+  assert.deepEqual(s.styles, { "Pace Chaser": 2, "End Closer": 1 });
+  assert.deepEqual(s.cards.slice(0, 2), [
+    ["A", 2],
+    ["B", 2],
+  ]);
+  assert.deepEqual(s.borrow, [["X", 2]], "só o 6º slot conta como emprestada");
+  assert.equal(s.best.id, "CM1");
+  assert.equal(s.worst.id, "CM2");
+  assert.equal(s.avg, (1 + 0.4) / 2);
+});
+
+test("estatísticas respeitam o que não conta", () => {
+  const data = { CM1: rec({ pl: "1st" }), CM2: rec({ pl: "1st" }) };
+  const s = L.computeStats(CMS, data, (id) => id !== "CM2");
+  assert.equal(s.tot, 1);
+});
+
+test("migração: mapa antigo sem versão vira o formato atual, completo", () => {
+  const old = {
+    CM1: { pl: "1st", rat: ["4-5-4-4"], team: [{ n: "Oguri Cap", d: ["A"] }] },
+  };
+  const out = L.migrate(old);
+  assert.equal(out.CM1.pl, "1st");
+  assert.equal(out.CM1.rat.length, 4);
+  assert.equal(out.CM1.team.length, 3);
+  assert.equal(out.CM1.team[0].d.length, 6);
+  assert.equal(out.CM1.team[0].d[0], "A");
+  assert.equal(out.CM1.team[0].ro, "Ace");
+  assert.equal(out.CM1.team[1].n, null);
+});
+
+test("migração: corrige valores estranhos em vez de quebrar", () => {
+  const out = L.migrate({
+    v: 1,
+    data: { CM1: { pl: "1º lugar", rat: "x", team: "x" }, "../ruim": {} },
+  });
+  assert.equal(out.CM1.pl, "");
+  assert.equal(out.CM1.team.length, 3);
+  assert.ok(!("../ruim" in out), "ids estranhos são ignorados");
+});
+
+test("migração recusa dados de uma versão mais nova", () => {
+  assert.throws(
+    () => L.migrate({ v: L.SCHEMA + 1, data: {} }),
+    /versão mais nova/,
+  );
+});
+
+test("backup: ida e volta preserva os dados e ignora PvPs vazios", () => {
+  const data = {
+    CM1: rec({ pl: "1st", rat: ["4-5-4-4", "", "", ""] }),
+    CM2: L.blankRecord(),
+  };
+  const backup = L.makeBackup(data, new Date("2026-10-27T12:00:00Z"));
+  assert.equal(backup.app, "cmcomps");
+  assert.equal(backup.v, L.SCHEMA);
+  assert.deepEqual(Object.keys(backup.data), ["CM1"]);
+  const back = L.parseBackup(JSON.stringify(backup));
+  assert.deepEqual(back.CM1, data.CM1);
+});
+
+test("backup: arquivo que não é do CM Comps é recusado", () => {
+  assert.throws(() => L.parseBackup("não é json"), /não é um backup/);
+  assert.throws(
+    () => L.parseBackup('{"app":"outro","data":{}}'),
+    /não é um backup/,
+  );
+});

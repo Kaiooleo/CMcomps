@@ -1,0 +1,26 @@
+# Roda a cada envio para o GitHub e em cada pull request:
+# confere a formatação (Prettier) e roda os testes.
+# Se algo falhar, aparece um X vermelho no commit e o GitHub avisa por e-mail.
+name: Verificação
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - name: Formatação (Prettier)
+        run: npm run format:check
+      - name: Testes dos cálculos
+        run: npm run test:unit
+      - name: Teste do site no navegador
+        run: npm run test:e2e
