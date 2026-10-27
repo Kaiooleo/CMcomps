@@ -1,15 +1,15 @@
 /*
  * CM Comps — service worker (PWA).
  *
- * - Código e dados (html, js, css, json): busca a versão nova primeiro e
- *   usa a cópia guardada só quando estiver sem internet. Assim as
- *   atualizações chegam na hora.
- * - Imagens (sp/, icons/, og.png): usa a cópia guardada primeiro, porque
+ * - Código e dados (html, js, css, json): sempre confere com o servidor se
+ *   há versão nova e usa a cópia guardada só quando estiver sem internet.
+ *   Assim as atualizações chegam na hora.
+ * - Imagens (img/, sp/, icons/, og.png): usa a cópia guardada primeiro, porque
  *   quase nunca mudam e são o que mais pesa.
  *
  * Suba CACHE quando quiser forçar todos a baixarem tudo de novo.
  */
-const CACHE = "cmcomps-v2";
+const CACHE = "cmcomps-v3";
 const CORE = [
   "./",
   "index.html",
@@ -69,8 +69,10 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // "no-cache": sempre pergunta ao servidor se o arquivo mudou (o GitHub Pages
+  // manda o navegador guardar por 10 min, o que mostraria a versão antiga)
   event.respondWith(
-    fetch(req)
+    fetch(req, { cache: "no-cache" })
       .then((res) => {
         if (res.ok) {
           const copy = res.clone();
