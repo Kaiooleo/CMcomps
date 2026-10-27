@@ -105,6 +105,9 @@ test("preencher um PvP salva no navegador e continua lá depois de recarregar", 
   assert.match(await page.textContent(".runner .rname"), /Oguri Cap/);
   assert.equal(await page.inputValue('.runner [name="w"]'), "40");
   assert.equal(await page.inputValue('.runner [data-lb="5"]'), "4");
+  // trocar de Uma pelas abas e voltar: deve ir para o PvP, não para a Uma anterior
+  await page.locator(".umatabs a").nth(1).click();
+  await page.waitForFunction(() => location.hash.endsWith("-2"));
   await page.click("#back"); // volta para a página do PvP
   await page.waitForSelector('[data-pl="1st"]');
   assert.equal(
@@ -188,6 +191,24 @@ test("dados da versão antiga do site são convertidos ao abrir", async () => {
     ["cmcomps:data"],
     "chave antiga removida após converter",
   );
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test("trocar de Uma pelas abas e voltar leva para a página do PvP", async () => {
+  const { context, page, errors } = await openPage();
+  await page.goto(base + "#cms");
+  await page.goto(base + "#cm-CM2");
+  await page.locator(".umacard").first().click();
+  await page.waitForFunction(() => location.hash === "#uma-CM2-1");
+  await page.locator(".umatabs a").nth(1).click();
+  await page.waitForFunction(() => location.hash === "#uma-CM2-2");
+  await page.locator(".umatabs a").nth(2).click();
+  await page.waitForFunction(() => location.hash === "#uma-CM2-3");
+  await page.click("#back");
+  await page.waitForFunction(() => location.hash === "#cm-CM2");
+  await page.click("#back");
+  await page.waitForFunction(() => location.hash === "#cms");
   assert.deepEqual(errors, []);
   await context.close();
 });

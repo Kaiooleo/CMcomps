@@ -564,6 +564,13 @@
   <nav class="seg umatabs" aria-label="Umas deste PvP">${tabs}</nav>
   <section>${runnerHtml(t, k, true)}</section>`;
     bindRunner(document.querySelector(".runner"), t, k, () => viewUma(id, k));
+    // abas: troca de Uma sem criar um passo a mais no "voltar" do navegador
+    document.querySelectorAll(".umatabs a").forEach((tab) =>
+      tab.addEventListener("click", (e) => {
+        e.preventDefault();
+        location.replace(tab.getAttribute("href"));
+      }),
+    );
   }
 
   /** Liga os botões e campos de um card de Uma editável. */
@@ -813,7 +820,12 @@
     }
   });
   window.addEventListener("hashchange", () => {
-    if (!goingBack && lastHash !== location.hash) backStack.push(lastHash);
+    // trocar de Uma pelas abas do mesmo PvP não empilha: voltar leva ao PvP
+    const pvpOf = (h) => (/^#uma-(.+)-\d$/.exec(h) || [])[1];
+    const sameUmaTabs =
+      pvpOf(lastHash) && pvpOf(lastHash) === pvpOf(location.hash);
+    if (!goingBack && lastHash !== location.hash && !sameUmaTabs)
+      backStack.push(lastHash);
     goingBack = false;
     lastHash = location.hash;
     if ($("#picker").open) $("#picker").close();
