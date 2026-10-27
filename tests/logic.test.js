@@ -205,3 +205,81 @@ test("backup: arquivo que não é do CM Comps é recusado", () => {
     /não é um backup/,
   );
 });
+
+/* ---------- Current PvP automático pelas datas ---------- */
+const SCHED_CMS = [
+  { id: "CM20" },
+  { id: "CM21" },
+  { id: "CM22" },
+  { id: "LOH1" },
+];
+const SCHED = {
+  CM20: { end: "2026-10-16" },
+  CM21: { end: "2026-11-06", est: true },
+};
+
+test("datas: soma de dias atravessa mês e ano", () => {
+  assert.equal(L.addDays("2026-10-16", 21), "2026-11-06");
+  assert.equal(L.addDays("2026-12-25", 10), "2027-01-04");
+});
+
+test("PvPs sem data são estimados a partir da final anterior + 21 dias", () => {
+  const full = L.fillSchedule(SCHED_CMS, SCHED);
+  assert.deepEqual(full.CM22, { end: "2026-11-27", est: true, auto: true });
+  assert.deepEqual(full.LOH1, { end: "2026-12-18", est: true, auto: true });
+  assert.equal(full.CM20.est, false);
+});
+
+test("Current PvP é o primeiro cuja final ainda não passou", () => {
+  const cur = L.resolveCurrent(SCHED_CMS, SCHED, {}, day("2026-10-27"));
+  assert.equal(cur.cur, "CM21");
+  assert.equal(cur.date, "2026-11-06");
+  assert.equal(cur.est, true);
+  // no dia seguinte à final do CM20, ele já não é mais o atual
+  assert.equal(
+    L.resolveCurrent(SCHED_CMS, SCHED, {}, day("2026-10-17")).cur,
+    "CM21",
+  );
+  assert.equal(
+    L.resolveCurrent(SCHED_CMS, SCHED, {}, day("2026-10-16")).cur,
+    "CM20",
+  );
+});
+
+test("opção A: com final estimada, o PvP só conta 3 dias depois", () => {
+  const est = { date: "2026-11-06", est: true };
+  assert.ok(!L.finalPassed(est, day("2026-11-07")));
+  assert.ok(!L.finalPassed(est, day("2026-11-09")));
+  assert.ok(L.finalPassed(est, day("2026-11-10")));
+  // com data oficial, conta logo após a final
+  assert.ok(L.finalPassed({ date: "2026-11-06" }, day("2026-11-07")));
+  // e o Current PvP só troca depois da folga
+  assert.equal(
+    L.resolveCurrent(SCHED_CMS, SCHED, {}, day("2026-11-09")).cur,
+    "CM21",
+  );
+  assert.equal(
+    L.resolveCurrent(SCHED_CMS, SCHED, {}, day("2026-11-10")).cur,
+    "CM22",
+  );
+});
+
+test("Current PvP pode ser forçado manualmente", () => {
+  const cur = L.resolveCurrent(
+    SCHED_CMS,
+    SCHED,
+    { cur: "CM22", date: "2026-11-30" },
+    day("2026-10-27"),
+  );
+  assert.deepEqual(cur, {
+    cur: "CM22",
+    date: "2026-11-30",
+    est: false,
+    manual: true,
+  });
+  // config inválida é ignorada
+  assert.equal(
+    L.resolveCurrent(SCHED_CMS, SCHED, { cur: "XYZ" }, day("2026-10-27")).cur,
+    "CM21",
+  );
+});

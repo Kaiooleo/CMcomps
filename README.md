@@ -6,7 +6,7 @@ Site para montar e acompanhar times de Champions Meeting e League of Heroes de U
 
 - Cada pessoa salva os próprios times **no navegador**. O rodapé tem **Baixar backup** e **Carregar backup** para levar os dados para outro aparelho.
 - Dá para **instalar como app** no celular ou computador (o navegador oferece "Instalar" / "Adicionar à tela inicial"), e ele abre mesmo sem internet.
-- O **Current PvP** e a data da final ficam em `data.js` (`window.CM_CONFIG`). PvPs depois dele não entram nas estatísticas, e ele mesmo só entra depois da final.
+- O **Current PvP** é automático: é o primeiro PvP cuja final ainda não passou, pelas datas do servidor global em `data.js` (`window.CM_SCHEDULE`). PvPs depois dele não entram nas estatísticas, e ele mesmo só entra depois da final. Com data **estimada**, ele só passa a contar 3 dias depois da estimativa. PvPs sem data são estimados pela final anterior + 21 dias. Para forçar manualmente, use `window.CM_CONFIG`.
 
 ## Arquivos
 

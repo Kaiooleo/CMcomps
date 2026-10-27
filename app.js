@@ -6,7 +6,14 @@
   const L = window.CMLogic;
   const CAT = window.CM_CATALOG;
   const ATLAS = window.CM_ATLAS;
-  const CONF = window.CM_CONFIG || { cur: null, date: null };
+  // Current PvP: o primeiro PvP cuja final ainda não passou (datas em data.js)
+  const CONF = L.resolveCurrent(
+    CAT.cms,
+    window.CM_SCHEDULE || {},
+    window.CM_CONFIG || {},
+  );
+  const finalLabel = () =>
+    CONF.date ? fmtDate(CONF.date) + (CONF.est ? " (estimada)" : "") : "";
 
   const STORAGE_KEY = "cmcomps:data";
   const LEGACY_KEY = "cmcomps:data:v1"; // versão inicial (mapa puro, sem número de formato)
@@ -168,9 +175,9 @@
     const passed = finalPassed();
     const days = L.daysToFinal(CONF);
     const when = passed
-      ? `Final em ${fmtDate(CONF.date)} · concluída`
+      ? `Final em ${finalLabel()} · concluída`
       : days != null
-        ? `Final em ${fmtDate(CONF.date)} · ${days <= 0 ? "hoje" : days === 1 ? "amanhã" : `faltam ${days} dias`}`
+        ? `Final em ${finalLabel()} · ${days <= 0 ? "hoje" : days === 1 ? "amanhã" : `faltam ${days} dias`}`
         : "Data da final não definida";
     const team = d ? d.team.filter((t) => t.n) : [];
     const teamHtml = team.length
@@ -343,7 +350,7 @@
     const title = c.nm && c.nm !== "League of Heroes" ? c.nm : c.sc;
     let chips = "";
     if (ph === "current")
-      chips += `<span class="chip cur">Current PvP${CONF.date ? " · final " + fmtDate(CONF.date).slice(0, 5) : ""}</span>`;
+      chips += `<span class="chip cur">Current PvP${CONF.date ? " · final " + fmtDate(CONF.date).slice(0, 5) + (CONF.est ? " (est.)" : "") : ""}</span>`;
     if (ph === "future") chips += '<span class="chip none">Not counted</span>';
     if (d && d.pl)
       chips += `<span class="chip ${plClass(d.pl)}">${esc(d.pl)}</span>`;
@@ -406,7 +413,7 @@
   function currentNote(id) {
     const ph = phase(id);
     if (ph === "current")
-      return `<div class="banner sched"><p><b>Current PvP.</b> ${finalPassed() ? "A final já passou e ele já conta nas estatísticas." : `Entra nas estatísticas depois da final${CONF.date ? ` (${fmtDate(CONF.date)})` : ""}.`}</p></div>`;
+      return `<div class="banner sched"><p><b>Current PvP.</b> ${finalPassed() ? "A final já passou e ele já conta nas estatísticas." : `Entra nas estatísticas depois da final${CONF.date ? ` (${finalLabel()})` : ""}${CONF.est ? `, com ${L.MARGIN_DAYS} dias de folga por ser data estimada` : ""}.`}</p></div>`;
     if (ph === "future")
       return `<div class="banner sched"><p>Este PvP vem depois do Current PvP (${esc(CONF.cur)}), então o que você montar aqui ainda não conta nas estatísticas.</p></div>`;
     return "";

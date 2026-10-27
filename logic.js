@@ -59,10 +59,70 @@
     return y >= 2020 && y <= 2100;
   }
 
-  /** A final já terminou? (conta a partir do fim do dia da final) */
+  /** Dias de folga depois de uma final estimada antes de o PvP passar a contar (opção A). */
+  const MARGIN_DAYS = 3;
+  /** Intervalo entre finais no servidor global, usado para estimar PvPs ainda sem data. */
+  const CADENCE_DAYS = 21;
+
+  /** Soma dias a uma data AAAA-MM-DD. */
+  function addDays(date, n) {
+    const [y, m, d] = date.split("-").map(Number);
+    return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+  }
+
+  /**
+   * A final já terminou? Conta a partir do fim do dia da final.
+   * Se a data for estimada (`est`), espera mais MARGIN_DAYS dias, para não
+   * contar antes da final de verdade caso a estimativa esteja adiantada.
+   */
   function finalPassed(conf, now = new Date()) {
     if (!conf || !validDate(conf.date)) return false;
-    return now > new Date(conf.date + "T23:59:59");
+    const deadline = conf.est ? addDays(conf.date, MARGIN_DAYS) : conf.date;
+    return now > new Date(deadline + "T23:59:59");
+  }
+
+  /**
+   * Calendário completo das finais: usa as datas de `sched` (oficiais ou
+   * estimadas) e, para os PvPs seguintes sem data, estima a partir da
+   * anterior + CADENCE_DAYS. Resultado: { id: { end, est, auto } }.
+   */
+  function fillSchedule(cms, sched = {}) {
+    const out = {};
+    let last = null;
+    for (const c of cms) {
+      const e = sched[c.id];
+      if (e && validDate(e.end)) {
+        out[c.id] = { end: e.end, est: !!e.est, auto: false };
+        last = e.end;
+      } else if (last) {
+        last = addDays(last, CADENCE_DAYS);
+        out[c.id] = { end: last, est: true, auto: true };
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Qual é o Current PvP hoje: o primeiro PvP cuja final ainda não passou.
+   * `config.cur` força um PvP manualmente (com `config.date` opcional).
+   * Retorna { cur, date, est, manual }; `cur` null = todos já passaram.
+   */
+  function resolveCurrent(cms, sched, config = {}, now = new Date()) {
+    const full = fillSchedule(cms, sched);
+    const ids = cms.map((c) => c.id);
+    if (config && config.cur && ids.includes(config.cur)) {
+      const e = full[config.cur];
+      const date = validDate(config.date) ? config.date : e ? e.end : null;
+      const est = validDate(config.date) ? false : !!(e && e.est);
+      return { cur: config.cur, date, est, manual: true };
+    }
+    for (const id of ids) {
+      const e = full[id];
+      if (!e) return { cur: id, date: null, est: false, manual: false };
+      if (!finalPassed({ date: e.end, est: e.est }, now))
+        return { cur: id, date: e.end, est: e.est, manual: false };
+    }
+    return { cur: null, date: null, est: false, manual: false };
   }
 
   /**
@@ -262,6 +322,11 @@
     SCHEMA,
     BORROWED_SLOT,
     WINS_TOTAL,
+    MARGIN_DAYS,
+    CADENCE_DAYS,
+    addDays,
+    fillSchedule,
+    resolveCurrent,
     dist,
     isValidRound,
     ratingScore,
