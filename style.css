@@ -1480,3 +1480,97 @@ img.spr {
   object-fit: cover;
   object-position: center bottom;
 }
+
+/* ---------- resumo dos parents no card (estilo do jogo) ---------- */
+.pgroups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.pg {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 0;
+}
+.pg .p,
+.pg .g {
+  flex: none;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.pg .p {
+  width: 40px;
+  height: 40px;
+  box-shadow: 0 0 0 2px var(--b1);
+}
+.pg2 .p {
+  box-shadow: 0 0 0 2px var(--pink);
+}
+.pg .g {
+  width: 26px;
+  height: 26px;
+  position: relative;
+}
+.pg .p.off,
+.pg .g.off {
+  background: transparent;
+  border: 1px dashed var(--line);
+  box-shadow: none;
+}
+.pg .p :is(img, .spr),
+.pg .g :is(img, .spr),
+.pg .ph {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+/* linha ligando o parent aos dois avós */
+.pg .gps {
+  position: relative;
+  display: flex;
+  gap: 4px;
+  padding-top: 7px;
+}
+.pg .gps::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -17px;
+  right: 13px;
+  height: 7px;
+  border: 1.5px solid var(--faint);
+  border-bottom: 0;
+  border-left: 0;
+  border-radius: 0 4px 0 0;
+  opacity: 0.7;
+}
+.pg .gps .g:first-child::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  height: 7px;
+  border-left: 1.5px solid var(--faint);
+  opacity: 0.7;
+}
+.pg .gps .g:first-child {
+  overflow: visible;
+}
+.pg .gps .g:first-child > * {
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+/* ---------- árvore de parents na página da Uma ---------- */
+.runner.big .lower {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.runner.big .tree {
+  gap: 18px 12px;
+  padding-top: 8px;
+}
+.runner.big .tree .par {
+  width: 50%;
+}

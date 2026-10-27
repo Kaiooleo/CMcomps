@@ -458,6 +458,19 @@
   </section>`;
   }
 
+  /**
+   * Resumo dos parents como no jogo: cada parent maior, com os dois avós
+   * menores ao lado, ligados a ele por uma linha.
+   * Ordem em `p`: P1, GP1.1, GP1.2, P2, GP2.1, GP2.2.
+   */
+  function parentsSummary(p) {
+    const face = (name, cls, label) =>
+      `<span class="${cls} ${name ? "" : "off"}" title="${esc(label + (name ? ": " + name : ""))}">${name ? charImg(name) : ""}</span>`;
+    const group = (i, n) =>
+      `<span class="pg pg${n}">${face(p[i], "p", "P" + n)}<span class="gps">${face(p[i + 1], "g", `GP${n}.1`)}${face(p[i + 2], "g", `GP${n}.2`)}</span></span>`;
+    return `<span class="pgroups">${group(0, 1)}${group(3, 2)}</span>`;
+  }
+
   /** Card resumido de uma Uma na página do PvP; clicar abre a página dela. */
   function umaCardHtml(cmId, t, k) {
     const href = `#uma-${esc(cmId)}-${k + 1}`;
@@ -478,7 +491,7 @@
       <span class="wrbox"><span class="label">WR</span><b class="num">${umaWr(t)}</b><small>${t.w != null ? `${t.w} / ${L.WINS_TOTAL} wins` : "sem wins"}</small></span>
     </span>
     <span class="minis">
-      <span class="label">Parents</span>${t.p.some(Boolean) ? `<span class="mrow">${mini(t.p, (x) => charImg(x))}</span>` : '<span class="none">—</span>'}
+      <span class="label">Parents</span>${t.p.some(Boolean) ? parentsSummary(t.p) : '<span class="none">—</span>'}
       <span class="label">Deck</span>${t.d.some(Boolean) ? `<span class="mrow deckrow">${mini(t.d, cardImg, L.BORROWED_SLOT)}</span>` : '<span class="none">—</span>'}
     </span>
   </a>`;
@@ -635,7 +648,6 @@
     <div class="lower">
       <div><div class="label">Parents</div>
         <div class="tree">
-          <span class="apex">${t.n ? charImg(t.n) : '<span class="ph">?</span>'}</span>
           ${parent(0)}${parent(3)}
           ${parent(1)}${parent(2)}${parent(4)}${parent(5)}
         </div></div>
