@@ -1474,3 +1474,9 @@ dialog::backdrop {
   background: transparent;
   border: 1px dashed var(--line);
 }
+
+/* artes e cartas em arquivo próprio: preenchem o espaço sem distorcer */
+img.spr {
+  object-fit: cover;
+  object-position: center bottom;
+}

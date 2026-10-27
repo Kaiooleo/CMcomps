@@ -115,8 +115,15 @@
   window.addEventListener("pagehide", () => saveTimer && flush());
 
   /* ---------- imagens (folhas em sp/) ---------- */
+  /**
+   * Imagem de uma Uma ou carta. Artes e cartas são arquivos próprios em alta
+   * (carregados só quando aparecem na tela); ícones vêm de folhas em sp/.
+   */
   function spr(file, alt) {
-    const [url, c, r, C, R] = ATLAS[file];
+    const entry = ATLAS[file];
+    if (typeof entry === "string")
+      return `<img class="spr" src="${entry}" alt="${esc(alt)}" loading="lazy" decoding="async">`;
+    const [url, c, r, C, R] = entry;
     const x = C > 1 ? (c / (C - 1)) * 100 : 0;
     const y = R > 1 ? (r / (R - 1)) * 100 : 0;
     return `<span class="spr" role="img" aria-label="${esc(alt)}" style="background-image:url(${url});background-size:${C * 100}% ${R * 100}%;background-position:${x}% ${y}%"></span>`;

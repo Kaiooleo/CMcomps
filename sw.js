@@ -9,7 +9,7 @@
  *
  * Suba CACHE quando quiser forçar todos a baixarem tudo de novo.
  */
-const CACHE = "cmcomps-v1";
+const CACHE = "cmcomps-v2";
 const CORE = [
   "./",
   "index.html",
@@ -45,7 +45,7 @@ self.addEventListener("activate", (event) => {
 });
 
 const isImage = (url) =>
-  /\/(sp|icons)\//.test(url.pathname) || url.pathname.endsWith("og.png");
+  /\/(sp|icons|img)\//.test(url.pathname) || url.pathname.endsWith("og.png");
 
 self.addEventListener("fetch", (event) => {
   const req = event.request;
