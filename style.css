@@ -1417,7 +1417,8 @@ dialog::backdrop {
   font-size: 26px;
 }
 .runner.big {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  /* coluna da arte do tamanho dela, para os Parents ficarem mais à esquerda */
+  grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
   gap: 24px;
   align-items: start;
 }

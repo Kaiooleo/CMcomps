@@ -631,7 +631,7 @@
         PAR[j],
       );
     const lbSelect = (j) =>
-      `<select class="lb" data-lb="${j}" aria-label="Limit break da carta ${j + 1}"><option value="">LB —</option>${L.LB_LABELS.map((x, n) => `<option value="${n}" ${t.lb[j] === n ? "selected" : ""}>${x}</option>`).join("")}</select>`;
+      `<select class="lb" data-lb="${j}" aria-label="Limit break da carta ${j + 1}"><option value=""></option>${L.LB_LABELS.map((x, n) => `<option value="${n}" ${t.lb[j] === n ? "selected" : ""}>${x}</option>`).join("")}</select>`;
     const deck = t.d
       .map((c, j) => {
         const borrowed = j === L.BORROWED_SLOT;
