@@ -130,7 +130,7 @@
       tot,
       wr: tot ? pl["1st"] / tot : 0,
       styles,
-      aces: top(aces, 10),
+      aces: top(aces, Infinity), // todas as Aces usadas, da mais para a menos usada
       cards: top(cards, 5),
       borrow: top(borrow, 5),
       scores,

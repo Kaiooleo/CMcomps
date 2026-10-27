@@ -1003,6 +1003,9 @@ dialog::backdrop {
 }
 .pick button {
   min-width: 0;
+  /* a coluna interna não pode crescer com nomes longos (ex.: Matikanetannhauser) */
+  grid-template-columns: minmax(0, 1fr);
+  overflow-wrap: anywhere;
   border: 1px solid transparent;
   background: none;
   border-radius: 10px;
@@ -1191,4 +1194,11 @@ dialog::backdrop {
   .curhero {
     grid-template-columns: 1fr;
   }
+}
+
+/* nomes longos quebram em vez de alargar o item */
+.ace > span:last-child,
+.pc .nm,
+.ch-team .ct b {
+  overflow-wrap: anywhere;
 }

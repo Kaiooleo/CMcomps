@@ -134,6 +134,20 @@ test("estatísticas: colocações, WR, Aces e cartas (Debuffers ficam de fora)",
   assert.equal(s.avg, (1 + 0.4) / 2);
 });
 
+test("lista de Aces mostra todas, não só as 10 mais usadas", () => {
+  const data = {};
+  for (let i = 0; i < 15; i++)
+    data["CM" + i] = rec({
+      team: [
+        uma("Uma " + i, "Ace", null),
+        uma(null, "Ace", null),
+        uma(null, "Ace", null),
+      ],
+    });
+  const cms = Object.keys(data).map((id) => ({ id }));
+  assert.equal(L.computeStats(cms, data).aces.length, 15);
+});
+
 test("estatísticas respeitam o que não conta", () => {
   const data = { CM1: rec({ pl: "1st" }), CM2: rec({ pl: "1st" }) };
   const s = L.computeStats(CMS, data, (id) => id !== "CM2");
