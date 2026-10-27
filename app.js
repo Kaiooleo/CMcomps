@@ -802,32 +802,18 @@
   });
 
   /* ---------- botão voltar ---------- */
-  const backStack = [];
-  let lastHash = location.hash;
-  let goingBack = false;
+  // Sobe um nível na estrutura do site (não segue o histórico):
+  // Uma → PvP dela → lista de PvP; "Ver todas" → Resumo.
+  function parentRoute(hash) {
+    const uma = /^#uma-(.+)-\d$/.exec(hash);
+    if (uma) return "cm-" + uma[1];
+    if (hash.startsWith("#rank-")) return "resumo";
+    return "cms";
+  }
   $("#back").addEventListener("click", () => {
-    if (backStack.length) {
-      goingBack = true;
-      location.hash = backStack.pop() || "resumo";
-    } else {
-      // sem histórico (ex.: página recarregada): sobe um nível
-      const uma = /^#uma-(.+)-\d$/.exec(location.hash);
-      location.hash = uma
-        ? "cm-" + uma[1]
-        : location.hash.startsWith("#rank-")
-          ? "resumo"
-          : "cms";
-    }
+    location.hash = parentRoute(location.hash);
   });
   window.addEventListener("hashchange", () => {
-    // trocar de Uma pelas abas do mesmo PvP não empilha: voltar leva ao PvP
-    const pvpOf = (h) => (/^#uma-(.+)-\d$/.exec(h) || [])[1];
-    const sameUmaTabs =
-      pvpOf(lastHash) && pvpOf(lastHash) === pvpOf(location.hash);
-    if (!goingBack && lastHash !== location.hash && !sameUmaTabs)
-      backStack.push(lastHash);
-    goingBack = false;
-    lastHash = location.hash;
     if ($("#picker").open) $("#picker").close();
     window.scrollTo(0, 0);
     route();

@@ -212,3 +212,18 @@ test("trocar de Uma pelas abas e voltar leva para a página do PvP", async () =>
   assert.deepEqual(errors, []);
   await context.close();
 });
+
+test("seta de voltar sobe um nível: PvP → lista, mesmo depois de ir para o próximo PvP", async () => {
+  const { context, page, errors } = await openPage();
+  await page.goto(base + "#cms");
+  await page.goto(base + "#cm-CM2");
+  await page.click('.nav2 a:has-text("CM3")');
+  await page.waitForFunction(() => location.hash === "#cm-CM3");
+  await page.click("#back");
+  await page.waitForFunction(() => location.hash === "#cms");
+  await page.goto(base + "#rank-cards");
+  await page.click("#back");
+  await page.waitForFunction(() => location.hash === "#resumo");
+  assert.deepEqual(errors, []);
+  await context.close();
+});
