@@ -272,6 +272,10 @@
       pink: true,
     },
     "rank-parents": { title: "Most Used Parents", key: "parents" },
+    "rank-grandparents": {
+      title: "Most Used Grandparents",
+      key: "grandparents",
+    },
     "rank-wincards": { title: "Cards in 1st Places", key: "winCards" },
   };
 
@@ -311,7 +315,7 @@
     const list = L.computeStats(CAT.cms, DATA, counted)[r.key];
     const body = !list.length
       ? '<p class="empty">Nothing recorded yet.</p>'
-      : r.key === "aces" || r.key === "parents"
+      : ["aces", "parents", "grandparents"].includes(r.key)
         ? aceGrid(list, 1)
         : podium(list, r.key === "borrow", true);
     $("#app").innerHTML = `
@@ -363,20 +367,7 @@
       }).join("")}</div>
     </div>
   </section>
-  <section class="row2">
-    <div class="panel"><div class="label">WR by style (Ace)</div>
-      ${wrBars(
-        STYLES.map((st) => {
-          const b = s.byStyle[st];
-          return {
-            label: st,
-            cls: stClass(st),
-            v: b && b.races ? b.wins / b.races : null,
-            sub: b ? `${b.wins}/${b.races}` : "",
-          };
-        }),
-      )}
-    </div>
+  <section class="row2 even">
     <div class="panel"><div class="label">WR by distance</div>
       ${wrBars(
         ["Sprint", "Mile", "Medium", "Long", "Dirt"].map((k) => {
@@ -389,18 +380,21 @@
         }),
       )}
     </div>
-  </section>
-  <section class="panel"><div class="label">WR by scenario</div>
+    <div class="panel"><div class="label">WR by scenario</div>
     ${wrBars(s.byScenario.map((r) => ({ label: r.sc, v: r.avg, sub: `${r.n} PvP${r.n > 1 ? "s" : ""}` })))}
+    </div>
   </section>
   <section class="panel">${panelHead("rank-cards", s.cards.length)}${podium(s.cards.slice(0, TOP), false)}</section>
   <section class="panel">${panelHead("rank-borrowed", s.borrow.length)}${podium(s.borrow.slice(0, TOP), true)}</section>
-  <section class="row2">
+  <section class="row2 even">
     <div class="panel">${panelHead("rank-parents", s.parents.length)}
       ${s.parents.length ? aceGrid(s.parents.slice(0, TOP)) : '<p class="empty">Nothing recorded yet.</p>'}
     </div>
-    <div class="panel">${panelHead("rank-wincards", s.winCards.length)}${podium(s.winCards.slice(0, TOP), false)}</div>
-  </section>`;
+    <div class="panel">${panelHead("rank-grandparents", s.grandparents.length)}
+      ${s.grandparents.length ? aceGrid(s.grandparents.slice(0, TOP)) : '<p class="empty">Nothing recorded yet.</p>'}
+    </div>
+  </section>
+  <section class="panel">${panelHead("rank-wincards", s.winCards.length)}${podium(s.winCards.slice(0, TOP), false)}</section>`;
 
     const chart = $("#chart");
     const tip = chart && chart.querySelector(".tip");
@@ -1182,6 +1176,22 @@
           72,
           36,
         );
+        // ligação do parent aos dois avós, como no site
+        const gy = py + 24;
+        const c1 = px + 80 + 24;
+        const c2 = px + 80 + 54 + 24;
+        ctx.save();
+        ctx.strokeStyle = "rgba(147,167,184,0.6)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(px + 66, gy - 9);
+        ctx.lineTo(c2 - 6, gy - 9);
+        ctx.arcTo(c2, gy - 9, c2, gy - 3, 6);
+        ctx.lineTo(c2, gy);
+        ctx.moveTo(c1, gy - 9);
+        ctx.lineTo(c1, gy);
+        ctx.stroke();
+        ctx.restore();
         for (const g2 of [1, 2]) {
           const gName = t.p[base + g2];
           await slot(

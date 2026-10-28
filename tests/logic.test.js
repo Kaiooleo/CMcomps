@@ -382,7 +382,7 @@ test("Wins da Uma: total = corridas dos rounds preenchidos, ou 80", () => {
   assert.equal(L.winsTotal(["5-4-3", "12/15", "17", "x"]), 50);
 });
 
-test("estatísticas novas: WR por estilo, distância e cenário; parents; cartas dos 1st", () => {
+test("estatísticas novas: WR por distância e cenário; parents e avós; cartas dos 1st", () => {
   const cms = [
     { id: "A", sc: "URA Finale", su: "Turf", m: 1200 },
     { id: "B", sc: "URA Finale", su: "Dirt", m: 1600 },
@@ -407,7 +407,7 @@ test("estatísticas novas: WR por estilo, distância e cenário; parents; cartas
           "Ace",
           "Pace Chaser",
           15,
-          ["Gold Ship", null, null, null, null, null],
+          ["Gold Ship", "Vodka", null, "Gold Ship", null, null],
           ["X", "Y", null, null, null, "Z"],
         ),
         u(
@@ -441,8 +441,6 @@ test("estatísticas novas: WR por estilo, distância e cenário; parents; cartas
     }),
   };
   const s = L.computeStats(cms, data);
-  assert.deepEqual(s.byStyle["Pace Chaser"], { wins: 25, races: 40 });
-  assert.equal(s.byStyle["Late Surger"], undefined, "Debuffer fica de fora");
   assert.deepEqual(s.byDist.Sprint, { sum: 0.85, n: 1 });
   assert.deepEqual(s.byDist.Dirt, { sum: 0.5, n: 1 });
   assert.deepEqual(s.byDist.Long, { sum: 1, n: 1 });
@@ -454,7 +452,8 @@ test("estatísticas novas: WR por estilo, distância e cenário; parents; cartas
     ],
   );
   assert.equal(s.byScenario[0].avg, (0.85 + 0.5) / 2);
-  assert.deepEqual(s.parents, [["Gold Ship", 2]]);
+  assert.deepEqual(s.parents, [["Gold Ship", 3]]);
+  assert.deepEqual(s.grandparents, [["Vodka", 1]]);
   assert.deepEqual(s.winCards, [
     ["X", 1],
     ["Y", 1],

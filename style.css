@@ -1836,3 +1836,12 @@ select[name="st"][class*="st-"] {
   flex-wrap: wrap;
   justify-content: flex-end;
 }
+
+.row2.even {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+@media (max-width: 960px) {
+  .row2.even {
+    grid-template-columns: 1fr;
+  }
+}

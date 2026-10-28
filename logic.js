@@ -208,10 +208,10 @@
     const cards = {};
     const borrow = {};
     const scores = [];
-    const byStyle = {}; // estilo → { wins, races } das Aces com Wins preenchido
     const byDist = {}; // distância (ou Dirt) → { sum, n } do WR dos rounds
     const byScenario = []; // [{ sc, sum, n }] na ordem dos PvPs
-    const parents = {}; // parents e avós usados (todas as Umas)
+    const parents = {}; // P1 e P2 usados (todas as Umas)
+    const grandparents = {}; // avós usados (todas as Umas)
     const winCards = {}; // cartas das Aces nos PvPs em que ficou 1st
     for (const cm of cms) {
       const d = data[cm.id];
@@ -233,16 +233,14 @@
           row.n++;
         }
       }
-      const total = winsTotal(d.rat);
       for (const t of d.team || []) {
         if (!t.n) continue;
-        (t.p || []).forEach((n) => n && (parents[n] = (parents[n] || 0) + 1));
+        (t.p || []).forEach((n, i) => {
+          if (!n) return;
+          const m = i === 0 || i === 3 ? parents : grandparents;
+          m[n] = (m[n] || 0) + 1;
+        });
         if (t.ro === "Debuffer") continue;
-        if (t.st && t.w != null) {
-          const b = (byStyle[t.st] = byStyle[t.st] || { wins: 0, races: 0 });
-          b.wins += t.w;
-          b.races += total;
-        }
         if (d.pl === "1st")
           (t.d || []).forEach(
             (k) => k && (winCards[k] = (winCards[k] || 0) + 1),
@@ -272,8 +270,8 @@
       cards: top(cards, Infinity),
       borrow: top(borrow, Infinity),
       parents: top(parents, Infinity),
+      grandparents: top(grandparents, Infinity),
       winCards: top(winCards, Infinity),
-      byStyle,
       byDist,
       byScenario: byScenario.map((r) => ({
         sc: r.sc,
