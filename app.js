@@ -1004,7 +1004,8 @@
   /* ---------- início ---------- */
   DATA = load();
   if (!$("#status").classList.contains("err"))
-    status(Object.keys(DATA).length ? "Saved in this browser" : "Ready");
+    // o aviso fica vazio até a pessoa mudar algo (aí mostra "Saving…/Saved")
+    status("");
   route();
 
   // PWA: permite instalar e abrir sem internet (só em http/https)
