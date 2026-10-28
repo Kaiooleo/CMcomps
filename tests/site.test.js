@@ -171,9 +171,15 @@ test("baixar backup e carregar em outro navegador traz os mesmos dados", async (
   );
   // navegador sem "salvar no mesmo arquivo" (celular, Firefox): baixa com o nome da pessoa
   await a.page.evaluate(() => (window.showSaveFilePicker = undefined));
+  // nome: digita uma vez e o campo some; "Change" abre o campo de novo
+  await a.page.fill("#me-name", "Kaio");
+  await a.page.press("#me-name", "Enter");
+  assert.equal(await a.page.isHidden("#me-name"), true);
+  assert.equal(await a.page.textContent("#me-text"), "Kaio");
+  await a.page.click("#me-edit");
   await a.page.fill("#me-name", "Kaio Leo");
   await a.page.press("#me-name", "Enter");
-  await a.page.locator("#bk-down").focus();
+  assert.equal(await a.page.textContent("#me-text"), "Kaio Leo");
   const [download] = await Promise.all([
     a.page.waitForEvent("download"),
     a.page.click("#bk-down"),
@@ -197,7 +203,7 @@ test("baixar backup e carregar em outro navegador traz os mesmos dados", async (
     document.querySelector("#status").textContent.startsWith("Backup loaded"),
   );
   assert.equal(
-    await b.page.inputValue("#me-name"),
+    await b.page.textContent("#me-text"),
     "Kaio Leo",
     "nome vem junto com o backup",
   );

@@ -9,7 +9,7 @@
  *
  * Suba CACHE quando quiser forçar todos a baixarem tudo de novo.
  */
-const CACHE = "cmcomps-v16";
+const CACHE = "cmcomps-v17";
 const CORE = [
   "./",
   "index.html",

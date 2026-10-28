@@ -1744,8 +1744,19 @@ select[name="st"][class*="st-"] {
 .hrow .me {
   margin-left: auto;
 }
-.hrow .me + .status {
+.hrow .me[hidden] {
+  display: none;
+}
+.hrow .me ~ .status {
   margin-left: 0;
+}
+.me b {
+  color: var(--fg);
+  font-weight: 700;
+}
+.btn.sm {
+  padding: 4px 12px;
+  font-size: 13px;
 }
 .me {
   display: inline-flex;
@@ -1767,7 +1778,7 @@ select[name="st"][class*="st-"] {
   .hrow .me {
     margin-left: 0;
   }
-  .hrow .me + .status {
+  .hrow .me ~ .status {
     width: auto;
     margin-left: auto;
   }

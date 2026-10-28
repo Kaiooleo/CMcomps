@@ -868,9 +868,35 @@
       .replace(/^-+|-+$/g, "");
     return `comps-${n || "backup"}.json`;
   };
+  // Digitou uma vez, fica salvo: o campo some e aparece só o nome com "Change"
   const nameInput = $("#me-name");
-  nameInput.value = getName();
-  nameInput.addEventListener("change", () => setName(nameInput.value.trim()));
+  const nameEdit = $("#me-edit");
+  const nameShow = $("#me-show");
+  function showName(editing = false) {
+    const n = getName();
+    const edit = editing || !n;
+    nameInput.closest("label").hidden = !edit;
+    nameShow.hidden = edit;
+    $("#me-text").textContent = n;
+    if (edit) nameInput.value = n;
+  }
+  function commitName() {
+    const v = nameInput.value.trim();
+    if (!v) return; // vazio não apaga o nome que já existe
+    setName(v);
+    showName();
+  }
+  nameInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") commitName();
+    if (e.key === "Escape" && getName()) showName();
+  });
+  nameInput.addEventListener("blur", commitName);
+  nameEdit.addEventListener("click", () => {
+    showName(true);
+    nameInput.focus();
+    nameInput.select();
+  });
+  showName();
 
   // Arquivo de backup escolhido da primeira vez (Chrome/Edge no computador):
   // os próximos backups substituem esse mesmo arquivo, sem perguntar de novo.
@@ -973,7 +999,7 @@
       DATA = data;
       if (typeof name === "string" && name && !getName()) {
         setName(name);
-        nameInput.value = name;
+        showName();
       }
       flush();
       status(`Backup loaded: ${n} PvPs`);
