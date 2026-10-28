@@ -382,7 +382,7 @@ test("Wins da Uma: total = corridas dos rounds preenchidos, ou 80", () => {
   assert.equal(L.winsTotal(["5-4-3", "12/15", "17", "x"]), 50);
 });
 
-test("estatísticas novas: wins por distância, WR por cenário; parents e avós", () => {
+test("estatísticas novas: wins por distância e por cenário; parents e avós", () => {
   const cms = [
     { id: "A", sc: "URA Finale", su: "Turf", m: 1200 },
     { id: "B", sc: "URA Finale", su: "Dirt", m: 1600 },
@@ -446,13 +446,12 @@ test("estatísticas novas: wins por distância, WR por cenário; parents e avós
   assert.deepEqual(s.byDist["Dirt Mile"], { wins: 0, finals: 1 });
   assert.deepEqual(s.byDist["Turf Long"], { wins: 0, finals: 1 });
   assert.deepEqual(
-    s.byScenario.map((r) => [r.sc, r.n]),
+    s.byScenario.map((r) => [r.sc, r.wins, r.finals]),
     [
-      ["URA Finale", 2],
-      ["Unity Cup", 1],
+      ["URA Finale", 1, 2],
+      ["Unity Cup", 0, 1],
     ],
   );
-  assert.equal(s.byScenario[0].avg, (0.85 + 0.5) / 2);
   assert.deepEqual(s.parents, [["Gold Ship", 3]]);
   assert.deepEqual(s.grandparents, [["Vodka", 1]]);
 });

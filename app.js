@@ -250,40 +250,26 @@
   };
 
   /** Vitórias (finais em 1st) por distância, com quantas finais foram registradas. */
-  function winBars(byDist) {
-    const keys = [
-      "Turf Sprint",
-      "Turf Mile",
-      "Turf Medium",
-      "Turf Long",
-      "Dirt Mile",
-      "Dirt Medium",
-    ];
-    const max = Math.max(
-      1,
-      ...keys.map((k) => (byDist[k] ? byDist[k].wins : 0)),
-    );
-    if (!keys.some((k) => byDist[k]))
+  /** Barras de vitórias (finais em 1st): [[nome, { wins, finals }]], com quantas finais houve. */
+  function winBars(rows) {
+    if (!rows.some(([, b]) => b))
       return '<p class="empty">Nothing recorded yet.</p>';
-    return `<div class="bars wrbars">${keys
-      .map((k) => {
-        const b = byDist[k];
-        return `<div class="bar"><span>${k}</span><span class="t"><i style="width:${b ? (b.wins / max) * 100 : 0}%"></i></span><b class="num">${b ? b.wins : "–"}</b><small>${b ? `of ${b.finals} final${b.finals > 1 ? "s" : ""}` : ""}</small></div>`;
-      })
-      .join("")}</div>`;
-  }
-
-  /** Barras de WR (0–100%): [{ label, v, sub, cls }]; sem dado, a barra fica vazia. */
-  function wrBars(rows) {
-    if (!rows.some((r) => r.v != null))
-      return '<p class="empty">Nothing recorded yet.</p>';
+    const max = Math.max(1, ...rows.map(([, b]) => (b ? b.wins : 0)));
     return `<div class="bars wrbars">${rows
       .map(
-        (r) =>
-          `<div class="bar ${r.cls || ""}"><span>${esc(r.label)}</span><span class="t"><i style="width:${(r.v || 0) * 100}%"></i></span><b class="num">${r.v != null ? pct(r.v) : "–"}</b><small>${r.sub || ""}</small></div>`,
+        ([k, b]) =>
+          `<div class="bar"><span>${esc(k)}</span><span class="t"><i style="width:${b ? (b.wins / max) * 100 : 0}%"></i></span><b class="num">${b ? b.wins : "–"}</b><small>${b ? `of ${b.finals} final${b.finals > 1 ? "s" : ""}` : ""}</small></div>`,
       )
       .join("")}</div>`;
   }
+  const DIST_KEYS = [
+    "Turf Sprint",
+    "Turf Mile",
+    "Turf Medium",
+    "Turf Long",
+    "Dirt Mile",
+    "Dirt Medium",
+  ];
 
   function panelHead(id, total) {
     const r = RANKINGS[id];
@@ -347,7 +333,7 @@
       </div>
     </div>
     <div class="panel"><div class="label">Wins by distance</div>
-      ${winBars(s.byDist)}
+      ${winBars(DIST_KEYS.map((k) => [k, s.byDist[k]]))}
     </div>
   </section>
   <section class="row2">
@@ -361,8 +347,8 @@
       }).join("")}</div>
     </div>
   </section>
-  <section class="panel"><div class="label">WR by scenario</div>
-    ${wrBars(s.byScenario.map((r) => ({ label: r.sc, v: r.avg, sub: `${r.n} PvP${r.n > 1 ? "s" : ""}` })))}
+  <section class="panel"><div class="label">Wins by scenario</div>
+    ${winBars(s.byScenario.map((r) => [r.sc, r]))}
   </section>
   <section class="panel">${panelHead("rank-cards", s.cards.length)}${podium(s.cards.slice(0, TOP), false)}</section>
   <section class="panel">${panelHead("rank-borrowed", s.borrow.length)}${podium(s.borrow.slice(0, TOP), true)}</section>

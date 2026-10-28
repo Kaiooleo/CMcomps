@@ -1786,7 +1786,8 @@ select[name="st"][class*="st-"] {
 
 /* barras de WR (por estilo, distância e cenário) */
 .wrbars .bar {
-  grid-template-columns: minmax(96px, 150px) 1fr 52px 64px;
+  grid-template-columns: 14em 1fr 40px 76px;
+  gap: 12px;
 }
 .wrbars .bar small {
   color: var(--faint);

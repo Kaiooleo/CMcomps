@@ -209,7 +209,7 @@
     const borrow = {};
     const scores = [];
     const byDist = {}; // "Turf Mile", "Dirt Medium"… → { wins: 1st, finals: finais registradas }
-    const byScenario = []; // [{ sc, sum, n }] na ordem dos PvPs
+    const byScenario = []; // [{ sc, wins: 1st, finals }] na ordem dos PvPs
     const parents = {}; // P1 e P2 usados (todas as Umas)
     const grandparents = {}; // avós usados (todas as Umas)
     for (const cm of cms) {
@@ -224,16 +224,16 @@
           b.finals++;
           if (d.pl === "1st") b.wins++;
         }
+        if (cm.sc) {
+          let row = byScenario.find((r) => r.sc === cm.sc);
+          if (!row) byScenario.push((row = { sc: cm.sc, wins: 0, finals: 0 }));
+          row.finals++;
+          if (d.pl === "1st") row.wins++;
+        }
       }
       const sc = ratingScore(d.rat);
       if (sc > 0) {
         scores.push({ id: cm.id, sc, pl: d.pl });
-        if (cm.sc) {
-          let row = byScenario.find((r) => r.sc === cm.sc);
-          if (!row) byScenario.push((row = { sc: cm.sc, sum: 0, n: 0 }));
-          row.sum += sc;
-          row.n++;
-        }
       }
       for (const t of d.team || []) {
         if (!t.n) continue;
@@ -270,11 +270,7 @@
       parents: top(parents, Infinity),
       grandparents: top(grandparents, Infinity),
       byDist,
-      byScenario: byScenario.map((r) => ({
-        sc: r.sc,
-        avg: r.sum / r.n,
-        n: r.n,
-      })),
+      byScenario,
       scores,
       best: sorted[0],
       worst: sorted[sorted.length - 1],
