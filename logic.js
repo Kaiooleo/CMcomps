@@ -32,31 +32,70 @@
    * - vitórias de cada tentativa, de 0 a 5, separadas por hífen: "5-4-3-5"
    * - o total de vitórias do dia, de 0 a 20: "17"
    */
+  const RACES_PER_DAY = 20; // 4 tentativas × 5 corridas
+
+  /**
+   * Lê um dia de round. Aceita três formatos:
+   * - tentativas: "5-4-3-5" (2 a 4 tentativas de 0 a 5) → corridas = tentativas × 5;
+   * - vitórias/corridas: "12/15" (até 20 corridas);
+   * - só o total do dia: "17" → considera 20 corridas.
+   * Devolve { wins, races }, ou null se vazio ou inválido.
+   */
+  function parseRound(v) {
+    const x = String(v ?? "").trim();
+    if (!x) return null;
+    if (/^\d{1,2}$/.test(x)) {
+      const w = +x;
+      return w <= RACES_PER_DAY ? { wins: w, races: RACES_PER_DAY } : null;
+    }
+    if (/^[0-5](-[0-5]){1,3}$/.test(x)) {
+      const nums = x.split("-").map(Number);
+      return { wins: nums.reduce((a, b) => a + b, 0), races: nums.length * 5 };
+    }
+    const m = /^(\d{1,2})\s*\/\s*(\d{1,2})$/.exec(x);
+    if (m) {
+      const w = +m[1];
+      const r = +m[2];
+      return r >= 1 && r <= RACES_PER_DAY && w <= r
+        ? { wins: w, races: r }
+        : null;
+    }
+    return null;
+  }
+
+  /** Campo vazio também é válido (dia ainda não preenchido). */
   function isValidRound(v) {
-    if (!v) return true;
-    const x = String(v).trim();
-    return /^(1?\d|20)$/.test(x) || /^[0-5](-[0-5]){1,3}$/.test(x);
+    return !String(v ?? "").trim() || parseRound(v) !== null;
+  }
+
+  /** Soma de vitórias e corridas dos dias preenchidos (inválidos ficam de fora). */
+  function roundTotals(rat) {
+    let wins = 0;
+    let races = 0;
+    for (const r of rat || []) {
+      const p = parseRound(r);
+      if (!p) continue;
+      wins += p.wins;
+      races += p.races;
+    }
+    return { wins, races };
   }
 
   /**
-   * WR dos rounds: vitórias ÷ (dias preenchidos × 20).
-   * Cada dia vale até 20 vitórias (4 tentativas × 5 corridas), então
-   * "4-5-4-4" e "17" dão o mesmo: 17/20 = 0,85. Dias vazios não entram na conta.
+   * WR dos rounds: vitórias ÷ corridas realmente feitas nos dias preenchidos.
+   * "4-5-4-4", "17" e "17/20" dão o mesmo (85%); "5-4-3" vale 12/15.
    */
   function ratingScore(rat) {
-    let sum = 0;
-    let rounds = 0;
-    for (const r of rat || []) {
-      if (!r) continue;
-      const nums = String(r)
-        .split("-")
-        .map((x) => parseInt(x, 10))
-        .filter((x) => !isNaN(x));
-      if (!nums.length) continue;
-      sum += nums.reduce((a, b) => a + b, 0);
-      rounds++;
-    }
-    return rounds ? sum / (rounds * 20) : 0;
+    const { wins, races } = roundTotals(rat);
+    return races ? wins / races : 0;
+  }
+
+  /**
+   * Total de corridas para o "Wins" de cada Uma: as corridas feitas nos rounds
+   * preenchidos; sem nenhum round preenchido, 80 (4 dias × 20), como na planilha.
+   */
+  function winsTotal(rat) {
+    return roundTotals(rat).races || WINS_TOTAL;
   }
 
   /** Data no formato AAAA-MM-DD com ano plausível; qualquer outra coisa vale como "sem data". */
@@ -416,8 +455,12 @@
     fillSchedule,
     resolveCurrent,
     dist,
+    RACES_PER_DAY,
+    parseRound,
     isValidRound,
+    roundTotals,
     ratingScore,
+    winsTotal,
     validDate,
     finalPassed,
     phase,

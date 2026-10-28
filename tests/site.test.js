@@ -99,8 +99,10 @@ test("preencher um PvP salva no navegador e continua lá depois de recarregar", 
   await page.locator('.runner [data-d="5"]').click();
   await page.locator("#pk-list button").first().click();
   await page.selectOption('.runner [data-lb="5"]', "4"); // MLB na emprestada
-  await page.fill('.runner [name="w"]', "40");
-  assert.equal(await page.textContent(".runner .wrp"), "50%");
+  // os rounds já preenchidos somam 40 corridas (4-5-4-4 e 17), então Wins é "de 40"
+  assert.match(await page.textContent(".runner .of"), /40/);
+  await page.fill('.runner [name="w"]', "30");
+  assert.equal(await page.textContent(".runner .wrp"), "75%");
   await page.waitForFunction(
     () =>
       document.querySelector("#status").textContent === "Saved in this browser",
@@ -109,7 +111,7 @@ test("preencher um PvP salva no navegador e continua lá depois de recarregar", 
   await page.reload();
   await page.waitForSelector(".runner.big");
   assert.match(await page.textContent(".runner .rname"), /Oguri Cap/);
-  assert.equal(await page.inputValue('.runner [name="w"]'), "40");
+  assert.equal(await page.inputValue('.runner [name="w"]'), "30");
   assert.equal(await page.inputValue('.runner [data-lb="5"]'), "4");
   // trocar de Uma pelas abas e voltar: deve ir para o PvP, não para a Uma anterior
   await page.locator(".umatabs a").nth(1).click();
@@ -124,7 +126,12 @@ test("preencher um PvP salva no navegador e continua lá depois de recarregar", 
   assert.equal(await page.inputValue("#rat-1"), "17");
   assert.equal(await page.textContent("#score"), "85%");
   assert.match(await page.textContent(".umacard .nm"), /Oguri Cap/);
-  assert.match(await page.textContent(".umacard .wrbox"), /50%/);
+  assert.match(await page.textContent(".umacard .wrbox"), /75%/);
+  assert.match(await page.textContent(".umacard .wrbox"), /30 \/ 40 wins/);
+  // formato vitórias/corridas: 12 em 15 corridas
+  await page.fill("#rat-2", "12/15");
+  assert.equal(await page.textContent("#dwr-2"), "80%");
+  assert.match(await page.textContent(".score"), /46 \/ 55 wins/);
 
   const saved = await page.evaluate(() =>
     JSON.parse(localStorage.getItem("cmcomps:data")),

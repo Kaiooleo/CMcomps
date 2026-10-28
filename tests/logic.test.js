@@ -30,9 +30,31 @@ test("WR das rodadas: soma ÷ (rodadas preenchidas × 20)", () => {
 });
 
 test("dia de round válido: tentativas (5-4-3-5) ou total do dia (17)", () => {
-  for (const ok of ["", "4", "17", "20", "0", "4-5", "4-5-4-4", "0-0-0-0"])
+  for (const ok of [
+    "",
+    "4",
+    "17",
+    "20",
+    "0",
+    "4-5",
+    "4-5-4-4",
+    "0-0-0-0",
+    "12/15",
+    "0/5",
+    "20/20",
+  ])
     assert.ok(L.isValidRound(ok), ok);
-  for (const bad of ["21", "6-5-4-4", "4-5-4-4-4", "4--5", "abc", "-3"])
+  for (const bad of [
+    "21",
+    "6-5-4-4",
+    "4-5-4-4-4",
+    "4--5",
+    "abc",
+    "-3",
+    "16/15",
+    "5/0",
+    "21/21",
+  ])
     assert.ok(!L.isValidRound(bad), bad);
 });
 
@@ -343,4 +365,19 @@ test("affinity: Umas ainda incompletas no global usam os números do JP", () => 
   assert.equal(L.affinityOf(["1005", "1065"], AFF), 29);
   // Satono Diamond × Kitasan Black continua pelo global (33; no JP é 34)
   assert.equal(L.affinityOf(["1067", "1068"], AFF), 33);
+});
+
+test("rounds: WR usa as corridas realmente feitas", () => {
+  assert.deepEqual(L.parseRound("5-4-3"), { wins: 12, races: 15 });
+  assert.deepEqual(L.parseRound("12/15"), { wins: 12, races: 15 });
+  assert.deepEqual(L.parseRound("17"), { wins: 17, races: 20 });
+  assert.equal(L.ratingScore(["5-4-3"]), 12 / 15);
+  assert.equal(L.ratingScore(["12/15", "17", "", ""]), 29 / 35);
+  assert.equal(L.ratingScore(["17/20"]), L.ratingScore(["4-5-4-4"]));
+});
+
+test("Wins da Uma: total = corridas dos rounds preenchidos, ou 80", () => {
+  assert.equal(L.winsTotal(["", "", "", ""]), 80);
+  assert.equal(L.winsTotal(undefined), 80);
+  assert.equal(L.winsTotal(["5-4-3", "12/15", "17", "x"]), 50);
 });

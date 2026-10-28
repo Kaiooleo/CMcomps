@@ -437,7 +437,12 @@
     "Round 2 · Day 1",
     "Round 2 · Day 2",
   ];
-  const umaWr = (t) => (t.w != null ? pct(t.w / L.WINS_TOTAL) : "–");
+  /** " · 52 / 65 wins" com o que já foi preenchido nos rounds. */
+  const raceCount = (rat) => {
+    const { wins, races } = L.roundTotals(rat);
+    return races ? ` · ${wins} / ${races} wins` : "";
+  };
+  const umaWr = (t, total) => (t.w != null ? pct(t.w / total) : "–");
 
   function currentNote(id) {
     if (phase(id) !== "current") return "";
@@ -485,6 +490,7 @@
 
   /** Card resumido de uma Uma na página do PvP; clicar abre a página dela. */
   function umaCardHtml(cmId, t, k) {
+    const total = L.winsTotal(DATA[cmId] && DATA[cmId].rat);
     const href = `#uma-${esc(cmId)}-${k + 1}`;
     if (!t.n)
       return `<a class="panel umacard empty" href="${href}"><span class="plus">+</span><span>Choose Uma ${k + 1}</span></a>`;
@@ -500,7 +506,7 @@
     <span class="info">
       <b class="nm">${esc(t.n)}</b>
       <span class="tags"><span class="chip ${t.ro === "Debuffer" ? "deb" : "ace"}">${esc(t.ro)}</span>${t.st ? `<span class="chip ${stClass(t.st)}">${esc(t.st)}</span>` : ""}</span>
-      <span class="wrbox"><span class="label">WR</span><b class="num">${umaWr(t)}</b><small>${t.w != null ? `${t.w} / ${L.WINS_TOTAL} wins` : "no wins"}</small></span>
+      <span class="wrbox"><span class="label">WR</span><b class="num">${umaWr(t, total)}</b><small>${t.w != null ? `${t.w} / ${total} wins` : "no wins"}</small></span>
     </span>
     <span class="minis">
       <span class="label">Parents</span>${t.p.some(Boolean) ? parentsSummary(t.p) : '<span class="none">—</span>'}
@@ -529,11 +535,11 @@
             r,
             k,
           ) => `<label class="day"><span class="label">${ROUND_LABELS[k]}</span>
-          <input id="rat-${k}" inputmode="numeric" value="${esc(r)}" class="${L.isValidRound(r) ? "" : "bad"}">
+          <input id="rat-${k}" autocomplete="off" value="${esc(r)}" class="${L.isValidRound(r) ? "" : "bad"}">
           <span class="num dwr" id="dwr-${k}">${r && L.isValidRound(r) ? pct(L.ratingScore([r])) : ""}</span></label>`,
         )
         .join("")}</div>
-      <div class="score"><b class="num" id="score">${total ? pct(total) : "–"}</b><span style="color:var(--muted)">WR total</span></div>
+      <div class="score"><b class="num" id="score">${total ? pct(total) : "–"}</b><span style="color:var(--muted)">WR total<span id="score-n">${raceCount(d.rat)}</span></span></div>
     </div>
   </section>`;
 
@@ -555,6 +561,7 @@
         $("#dwr-" + k).textContent = v && ok ? pct(L.ratingScore([v])) : "";
         const s = L.ratingScore(d.rat);
         $("#score").textContent = s ? pct(s) : "–";
+        $("#score-n").textContent = raceCount(d.rat);
       });
     });
   }
@@ -574,8 +581,14 @@
     $("#app").innerHTML = `
   ${pvpHead(cm, ` <span class="sub">· Uma ${k + 1}</span>`)}
   <nav class="seg umatabs" aria-label="Umas in this PvP">${tabs}</nav>
-  <section>${runnerHtml(t, k, true)}</section>`;
-    bindRunner(document.querySelector(".runner"), t, k, () => viewUma(id, k));
+  <section>${runnerHtml(t, k, true, L.winsTotal(d.rat))}</section>`;
+    bindRunner(
+      document.querySelector(".runner"),
+      t,
+      k,
+      () => viewUma(id, k),
+      L.winsTotal(d.rat),
+    );
     // abas: troca de Uma sem criar um passo a mais no "voltar" do navegador
     document.querySelectorAll(".umatabs a").forEach((tab) =>
       tab.addEventListener("click", (e) => {
@@ -586,7 +599,7 @@
   }
 
   /** Liga os botões e campos de um card de Uma editável. */
-  function bindRunner(card, t, k, rerender) {
+  function bindRunner(card, t, k, rerender, total = L.WINS_TOTAL) {
     const change = (fn, redraw = true) => {
       fn();
       save();
@@ -609,7 +622,7 @@
     wins.addEventListener("input", () => {
       const v = parseInt(wins.value, 10);
       change(() => (t.w = isNaN(v) ? null : v), false);
-      card.querySelector(".wrp").textContent = umaWr(t);
+      card.querySelector(".wrp").textContent = umaWr(t, total);
     });
     card.querySelectorAll("[data-p]").forEach((b) =>
       b.addEventListener("click", () => {
@@ -657,7 +670,7 @@
     </section>`;
   }
 
-  function runnerHtml(t, k, big = false) {
+  function runnerHtml(t, k, big = false, total = L.WINS_TOTAL) {
     const slot = (cls, inner, attrs, label, empty, extra = "") =>
       `<button type="button" class="slot ${cls} ${inner ? "filled" : ""}" ${attrs} aria-label="${esc(label)}" title="${esc(label)}">${inner || empty}${extra}</button>`;
     const parent = (j) =>
@@ -690,8 +703,8 @@
         <div class="fields">
           <label class="nolab"><select name="ro" aria-label="Ace or Debuffer">${ROLES.map((r) => `<option ${t.ro === r ? "selected" : ""}>${r}</option>`).join("")}</select></label>
           <label class="nolab"><select name="st" class="${stClass(t.st)}" aria-label="Style"><option value="">Style —</option>${STYLES.map((s) => `<option ${t.st === s ? "selected" : ""}>${s}</option>`).join("")}</select></label>
-          <label>Wins<span class="wins"><input name="w" type="number" min="0" max="${L.WINS_TOTAL}" inputmode="numeric" value="${t.w ?? ""}" aria-label="Wins (out of ${L.WINS_TOTAL})"><span class="of">/ ${L.WINS_TOTAL}</span></span></label>
-          <div class="wrbox"><span class="label">WR</span><b class="num wrp">${umaWr(t)}</b></div>
+          <label>Wins<span class="wins"><input name="w" type="number" min="0" max="${total}" inputmode="numeric" value="${t.w ?? ""}" aria-label="Wins (out of ${total})"><span class="of">/ ${total}</span></span></label>
+          <div class="wrbox"><span class="label">WR</span><b class="num wrp">${umaWr(t, total)}</b></div>
         </div></div></div>
     <div class="lower">
       <div><div class="label">Parents</div>
