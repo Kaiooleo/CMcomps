@@ -403,7 +403,7 @@
       (c) =>
         (listFilter === "all" || (listFilter === "loh") === isLoh(c.id)) &&
         (!q ||
-          [c.id, c.nm, c.sc, c.tr, c.su, distOf(c), c.m]
+          [c.id, c.nm, c.sc, c.ab, c.tr, c.su, distOf(c), c.m]
             .join(" ")
             .toLowerCase()
             .includes(q)),
