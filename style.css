@@ -1709,6 +1709,12 @@ select[name="st"][class*="st-"] {
   border-color: color-mix(in srgb, var(--st) 55%, transparent);
 }
 
+/* espaços vazios do deck no card: azul bem clarinho; o da emprestada em rosa */
+.mrow.deckrow .m.off {
+  opacity: 1;
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  border: 1.5px dashed color-mix(in srgb, var(--accent) 75%, transparent);
+}
 /* espaço da carta emprestada vazio: continua com o rosa do jogo */
 .mrow .m.off.borrow {
   opacity: 1;

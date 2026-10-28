@@ -512,8 +512,8 @@
       <span class="wrbox"><span class="label">WR</span><b class="num">${umaWr(t, total)}</b><small>${t.w != null ? `${t.w} / ${total} wins` : "no wins"}</small></span>
     </span>
     <span class="minis">
-      <span class="label">Parents</span>${t.p.some(Boolean) ? parentsSummary(t.p) : '<span class="none">—</span>'}
-      <span class="label">Deck</span>${t.d.some(Boolean) ? `<span class="mrow deckrow">${mini(t.d, cardImg, L.BORROWED_SLOT)}</span>` : '<span class="none">—</span>'}
+      <span class="label">Parents</span>${parentsSummary(t.p)}
+      <span class="label">Deck</span><span class="mrow deckrow">${mini(t.d, cardImg, L.BORROWED_SLOT)}</span>
     </span>
   </a>`;
   }
