@@ -363,12 +363,15 @@
 
   /**
    * Pontos de afinidade de um grupo de personagens: soma dos grupos que
-   * todos têm em comum. Usa os dados do global quando todos já estão lá;
-   * senão, os do japonês. Mesmo personagem repetido vale 0 (o jogo não deixa).
+   * todos têm em comum. Usa os dados do global quando todos já estão lá
+   * (e fora de `jpOnly`); senão, os do japonês. Mesmo personagem repetido vale 0 (o jogo não deixa).
    */
   function affinityOf(chars, aff) {
     if (new Set(chars).size < chars.length) return 0;
-    const db = chars.every((c) => aff.gl.g[c]) ? aff.gl : aff.jp;
+    const jpOnly = aff.jpOnly || [];
+    const db = chars.every((c) => aff.gl.g[c] && !jpOnly.includes(c))
+      ? aff.gl
+      : aff.jp;
     const sets = chars.map((c) => new Set(db.g[c] || []));
     let sum = 0;
     for (const t of sets[0])

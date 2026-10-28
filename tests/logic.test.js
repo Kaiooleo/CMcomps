@@ -337,3 +337,10 @@ test("affinity: segmentos com alguém faltando ficam vazios e não somam", () =>
   assert.equal(L.affinityMark(151), "◎");
   assert.equal(L.affinityOf(["1006", "1006"], AFF), 0, "mesma personagem");
 });
+
+test("affinity: Umas ainda incompletas no global usam os números do JP", () => {
+  // Fuji Kiseki × Daitaku Helios: 1 nos dados do global, 29 no JP
+  assert.equal(L.affinityOf(["1005", "1065"], AFF), 29);
+  // Satono Diamond × Kitasan Black continua pelo global (33; no JP é 34)
+  assert.equal(L.affinityOf(["1067", "1068"], AFF), 33);
+});
