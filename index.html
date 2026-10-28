@@ -75,7 +75,15 @@
           <a href="#resumo" id="nav-resumo">Summary</a
           ><a href="#cms" id="nav-cms">PvP</a>
         </nav>
-        <div class="status" id="status">Carregando…</div>
+        <label class="me"
+          >Name<input
+            id="me-name"
+            type="text"
+            maxlength="30"
+            autocomplete="nickname"
+            placeholder="Your name"
+        /></label>
+        <div class="status" id="status">Loading…</div>
       </div>
     </header>
     <main class="wrap" id="app"></main>
@@ -85,14 +93,6 @@
         device or keep them safe if you clear the browser, save a backup.
       </p>
       <div class="confirm">
-        <label class="me"
-          >Name<input
-            id="me-name"
-            type="text"
-            maxlength="30"
-            autocomplete="nickname"
-            placeholder="Your name"
-        /></label>
         <button class="btn" type="button" id="bk-down">Save backup</button
         ><label class="btn" for="bk-file" style="cursor: pointer"
           >Load backup</label

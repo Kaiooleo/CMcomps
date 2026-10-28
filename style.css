@@ -1740,19 +1740,35 @@ select[name="st"][class*="st-"] {
   line-height: 1.4;
 }
 
-/* nome da pessoa no rodapé (dá nome ao arquivo de backup) */
-.foot .me {
+/* nome da pessoa no topo (dá nome ao arquivo de backup) */
+.hrow .me {
+  margin-left: auto;
+}
+.hrow .me + .status {
+  margin-left: 0;
+}
+.me {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   font-size: 13px;
   color: var(--muted);
 }
-.foot .me input {
+.me input {
   width: 130px;
   padding: 7px 10px;
   border-radius: 999px;
   border: 1px solid var(--line);
   background: var(--surface);
   color: var(--fg);
+}
+@media (max-width: 560px) {
+  /* celular: nome e "Saved" dividem a mesma linha, abaixo do menu */
+  .hrow .me {
+    margin-left: 0;
+  }
+  .hrow .me + .status {
+    width: auto;
+    margin-left: auto;
+  }
 }
