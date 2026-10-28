@@ -93,12 +93,24 @@ test("preencher um PvP salva no navegador e continua lá depois de recarregar", 
   // affinity: só com a Uma ainda não há segmento; com P1 aparece Uma · P1
   assert.equal(await page.textContent(".afftot b"), "—");
   await page.locator('.runner [data-p="0"]').click();
+  // escolhendo parent: cada opção mostra a affinity, da maior para a menor
+  const scores = await page.$$eval("#pk-list .aff", (els) =>
+    els.map((e) => +e.textContent),
+  );
+  assert.ok(scores.length > 100, "todas as opções têm affinity");
+  assert.deepEqual(
+    scores,
+    [...scores].sort((a, b) => b - a),
+    "ordem da maior para a menor",
+  );
   await page.fill("#pk-q", "Biwa Hayahide");
   await page.locator('#pk-list button[data-v="Biwa Hayahide"]').click();
   assert.equal(await page.textContent(".afftot b"), "20");
   await page.locator('.runner [data-d="5"]').click();
   await page.locator("#pk-list button").first().click();
-  await page.selectOption('.runner [data-lb="5"]', "4"); // MLB na emprestada
+  // carta nova entra como MLB, e dá para trocar
+  assert.equal(await page.inputValue('.runner [data-lb="5"]'), "4");
+  await page.selectOption('.runner [data-lb="5"]', "2");
   // os rounds já preenchidos somam 40 corridas (4-5-4-4 e 17), então Wins é "de 40"
   assert.match(await page.textContent(".runner .of"), /40/);
   await page.fill('.runner [name="w"]', "30");
@@ -112,7 +124,7 @@ test("preencher um PvP salva no navegador e continua lá depois de recarregar", 
   await page.waitForSelector(".runner.big");
   assert.match(await page.textContent(".runner .rname"), /Oguri Cap/);
   assert.equal(await page.inputValue('.runner [name="w"]'), "30");
-  assert.equal(await page.inputValue('.runner [data-lb="5"]'), "4");
+  assert.equal(await page.inputValue('.runner [data-lb="5"]'), "2");
   // trocar de Uma pelas abas e voltar: deve ir para o PvP, não para a Uma anterior
   await page.locator(".umatabs a").nth(1).click();
   await page.waitForFunction(() => location.hash.endsWith("-2"));
@@ -150,10 +162,16 @@ test("baixar backup e carregar em outro navegador traz os mesmos dados", async (
     () =>
       document.querySelector("#status").textContent === "Saved in this browser",
   );
+  // navegador sem "salvar no mesmo arquivo" (celular, Firefox): baixa com o nome da pessoa
+  await a.page.evaluate(() => (window.showSaveFilePicker = undefined));
+  await a.page.fill("#me-name", "Kaio Leo");
+  await a.page.press("#me-name", "Enter");
+  await a.page.locator("#bk-down").focus();
   const [download] = await Promise.all([
     a.page.waitForEvent("download"),
     a.page.click("#bk-down"),
   ]);
+  assert.equal(download.suggestedFilename(), "comps-Kaio-Leo.json");
   const file = path.join(
     require("node:os").tmpdir(),
     `cmcomps-${Date.now()}.json`,
@@ -162,6 +180,7 @@ test("baixar backup e carregar em outro navegador traz os mesmos dados", async (
   const backup = JSON.parse(fs.readFileSync(file, "utf8"));
   assert.equal(backup.app, "cmcomps");
   assert.equal(backup.data.CM7.pl, "2nd");
+  assert.equal(backup.name, "Kaio Leo");
   await a.context.close();
 
   const b = await openPage(); // contexto novo = navegador "limpo"
@@ -169,6 +188,11 @@ test("baixar backup e carregar em outro navegador traz os mesmos dados", async (
   await b.page.setInputFiles("#bk-file", file);
   await b.page.waitForFunction(() =>
     document.querySelector("#status").textContent.startsWith("Backup loaded"),
+  );
+  assert.equal(
+    await b.page.inputValue("#me-name"),
+    "Kaio Leo",
+    "nome vem junto com o backup",
   );
   await b.page.goto(base + "#cm-CM7");
   assert.equal(

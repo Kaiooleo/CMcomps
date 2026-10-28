@@ -71,6 +71,14 @@
   const fmtDate = (d) => (d ? `${fmtShort(d)}, ${d.slice(0, 4)}` : "");
   const cond = (c) => [c.se, c.we, c.gr].filter(Boolean).map(esc).join(" · ");
   const isLoh = (id) => id.startsWith("LOH");
+  // distância: pelos metros; sem metros ainda (PvP só anunciado), pela categoria "dc"
+  const distOf = (c) => L.dist(c.m) || c.dc || "";
+  /** "Pista · 2400m · Turf · Medium · Left", pulando o que ainda não se sabe. */
+  const courseLine = (c) =>
+    [c.tr, c.m ? `${c.m}m` : "", c.su, distOf(c), c.dir]
+      .filter(Boolean)
+      .map(esc)
+      .join(" · ");
   const status = (text, isError = false) => {
     const s = $("#status");
     s.textContent = text;
@@ -216,7 +224,7 @@
     <a class="ch-main" href="#cm-${esc(cm.id)}">
       <div class="label" style="color:var(--accent)">Current PvP</div>
       <h1><span class="cmid ${isLoh(cm.id) ? "loh" : ""}">${esc(cm.id)}</span> <span class="sc">· ${esc(cm.sc)}</span></h1>
-      <div class="ln num">${esc(cm.tr)} · ${cm.m || "?"}m · ${esc(cm.su)} · ${esc(L.dist(cm.m))}${cm.dir ? " · " + esc(cm.dir) : ""}</div>
+      <div class="ln num">${courseLine(cm)}</div>
       ${cond(cm) ? `<div class="ln">${cond(cm)}</div>` : ""}
       <div class="when"><span class="chip cur">${when}</span>${d && d.pl ? ` <span class="chip ${plClass(d.pl)}">${esc(d.pl)}</span>` : ""}</div>
     </a>
@@ -382,7 +390,7 @@
       chips += `<span class="chip none">${team.length ? "No result" : "Empty"}</span>`;
     return `<a class="tile ${ph === "future" ? "future" : ""} ${ph === "current" ? "current" : ""}" href="#cm-${esc(c.id)}">
       <div class="top"><h2><span class="cmid ${isLoh(c.id) ? "loh" : ""}">${esc(c.id)}</span> <span class="sc">· ${esc(title)}</span></h2>${chips}</div>
-      <div class="ln num">${esc(c.tr)} · ${c.m || "?"}m · ${esc(c.su)} · ${esc(L.dist(c.m))}${c.dir ? " · " + esc(c.dir) : ""}</div>
+      <div class="ln num">${courseLine(c)}</div>
       <div class="cond"><b>${esc(c.sc)}</b>${cond(c) ? " · " + cond(c) : ""}</div>
       <div class="faces">${team.map((t) => `<span class="face ${t.ro === "Debuffer" ? "debuff" : ""}" title="${esc(t.n)} · ${esc(t.ro)}">${charImg(t.n, true)}</span>`).join("")}</div>
     </a>`;
@@ -395,7 +403,7 @@
       (c) =>
         (listFilter === "all" || (listFilter === "loh") === isLoh(c.id)) &&
         (!q ||
-          [c.id, c.nm, c.sc, c.tr, c.su, L.dist(c.m), c.m]
+          [c.id, c.nm, c.sc, c.tr, c.su, distOf(c), c.m]
             .join(" ")
             .toLowerCase()
             .includes(q)),
@@ -457,9 +465,9 @@
     const next = CAT.cms[cm.i + 1];
     const meta = [
       cm.tr,
-      `${cm.m || "?"}m`,
+      cm.m ? `${cm.m}m` : "",
       cm.su,
-      L.dist(cm.m),
+      distOf(cm),
       cm.dir,
       cm.se,
       cm.we,
@@ -630,11 +638,23 @@
     card.querySelectorAll("[data-p]").forEach((b) =>
       b.addEventListener("click", () => {
         const j = +b.dataset.p;
+        // com a Uma escolhida, cada opção mostra a affinity total que a árvore
+        // teria com ela nesse lugar, e a lista vem da maior para a menor
+        const main = charaIdOf(t.n);
+        const ids = t.p.map(charaIdOf);
+        const score = main
+          ? (name) => {
+              const p = ids.slice();
+              p[j] = charaIdOf(name);
+              return L.affinity(main, p, window.CM_AFFINITY).total;
+            }
+          : null;
         openPicker(
           "char",
           t.p[j],
           `${PAR[j]} · ${t.n || "Uma " + (k + 1)}`,
           (v) => change(() => (t.p[j] = v)),
+          score,
         );
       }),
     );
@@ -650,16 +670,28 @@
         const j = +b.dataset.d;
         const title =
           j === L.BORROWED_SLOT ? "Borrowed card" : `Support card ${j + 1}`;
-        openPicker("card", t.d[j], title, (v) => change(() => (t.d[j] = v)));
+        openPicker("card", t.d[j], title, (v) =>
+          change(() => {
+            // carta nova entra como MLB; dá para trocar depois
+            if (v !== t.d[j]) t.lb[j] = v ? 4 : null;
+            t.d[j] = v;
+          }),
+        );
       }),
     );
   }
 
+  /** Id do personagem (o mesmo em todas as versões dela) pelo nome no catálogo. */
+  const charaIdOf = (name) =>
+    name && CHAR.has(name) ? L.charaId(CHAR.get(name).i) : null;
+
   /** Affinity base da Uma com os parents: total em destaque e cada segmento. */
   function affinityHtml(t) {
-    const id = (name) =>
-      name && CHAR.has(name) ? L.charaId(CHAR.get(name).i) : null;
-    const a = L.affinity(id(t.n), t.p.map(id), window.CM_AFFINITY);
+    const a = L.affinity(
+      charaIdOf(t.n),
+      t.p.map(charaIdOf),
+      window.CM_AFFINITY,
+    );
     const any = a.parts.some((p) => p.value !== null);
     const rows = a.parts
       .map(
@@ -685,7 +717,7 @@
         PAR[j],
       );
     const lbSelect = (j) =>
-      `<select class="lb" data-lb="${j}" aria-label="Limit break of card ${j + 1}"><option value=""></option>${L.LB_LABELS.map((x, n) => `<option value="${n}" ${t.lb[j] === n ? "selected" : ""}>${x}</option>`).join("")}</select>`;
+      `<select class="lb" data-lb="${j}" aria-label="Limit break of card ${j + 1}" ${t.d[j] ? "" : 'disabled style="visibility:hidden"'}>${L.LB_LABELS.map((x, n) => `<option value="${n}" ${(t.lb[j] ?? 4) === n ? "selected" : ""}>${x}</option>`).join("")}</select>`;
     const deck = t.d
       .map((c, j) => {
         const borrowed = j === L.BORROWED_SLOT;
@@ -724,8 +756,8 @@
   let picker = null;
   const pickerState = { q: "", rarity: new Set(), type: new Set() };
 
-  function openPicker(kind, current, title, onPick) {
-    picker = { kind, onPick };
+  function openPicker(kind, current, title, onPick, score = null) {
+    picker = { kind, onPick, score };
     pickerState.q = "";
     $("#pk-q").value = "";
     $("#pk-title").textContent = title;
@@ -768,9 +800,12 @@
       picker.kind === "char"
         ? CAT.chars
             .filter((c) => !q || c.n.toLowerCase().includes(q))
+            .map((c) => ({ c, sc: picker.score ? picker.score(c.n) : null }))
+            // com affinity: da maior para a menor (empates mantêm a ordem do jogo)
+            .sort((a, b) => (picker.score ? b.sc - a.sc : 0))
             .map(
-              (c) =>
-                `<button type="button" data-v="${esc(c.n)}"><span class="im">${charImg(c.n)}</span><span>${esc(c.n)}</span></button>`,
+              ({ c, sc }) =>
+                `<button type="button" data-v="${esc(c.n)}"><span class="im">${charImg(c.n)}${sc != null ? `<b class="aff num" title="Affinity">${sc}</b>` : ""}</span><span>${esc(c.n)}</span></button>`,
             )
         : CAT.cards
             .filter(
@@ -808,20 +843,112 @@
   });
 
   /* ---------- backup ---------- */
-  $("#bk-down").addEventListener("click", () => {
-    if (saveTimer) flush();
-    const blob = new Blob([JSON.stringify(L.makeBackup(DATA), null, 1)], {
-      type: "application/json",
+  // Nome da pessoa: fica neste navegador e dá nome ao arquivo de backup
+  const NAME_KEY = "cmcomps:name";
+  const getName = () => {
+    try {
+      return localStorage.getItem(NAME_KEY) || "";
+    } catch (_) {
+      return "";
+    }
+  };
+  const setName = (v) => {
+    try {
+      v ? localStorage.setItem(NAME_KEY, v) : localStorage.removeItem(NAME_KEY);
+    } catch (_) {
+      /* sem armazenamento: o nome só vale até fechar a página */
+    }
+  };
+  const backupFileName = () => {
+    const n = getName()
+      .trim()
+      .replace(/[^\p{L}\p{N}_-]+/gu, "-")
+      .replace(/^-+|-+$/g, "");
+    return `comps-${n || "backup"}.json`;
+  };
+  const nameInput = $("#me-name");
+  nameInput.value = getName();
+  nameInput.addEventListener("change", () => setName(nameInput.value.trim()));
+
+  // Arquivo de backup escolhido da primeira vez (Chrome/Edge no computador):
+  // os próximos backups substituem esse mesmo arquivo, sem perguntar de novo.
+  const HANDLE_DB = "cmcomps";
+  function handleStore(mode, fn) {
+    return new Promise((resolve, reject) => {
+      const open = indexedDB.open(HANDLE_DB, 1);
+      open.onupgradeneeded = () => open.result.createObjectStore("kv");
+      open.onerror = () => reject(open.error);
+      open.onsuccess = () => {
+        const tx = open.result.transaction("kv", mode);
+        const req = fn(tx.objectStore("kv"));
+        tx.oncomplete = () => resolve(req && req.result);
+        tx.onerror = () => reject(tx.error);
+      };
     });
+  }
+  const loadHandle = () =>
+    handleStore("readonly", (st) => st.get("backup")).catch(() => null);
+  const saveHandle = (v) =>
+    handleStore("readwrite", (st) => st.put(v, "backup")).catch(() => {});
+
+  async function saveToSameFile(text) {
+    const name = backupFileName();
+    let saved = await loadHandle();
+    let handle = saved && saved.forName === name ? saved.handle : null;
+    if (handle) {
+      const opts = { mode: "readwrite" };
+      if (
+        (await handle.queryPermission(opts)) !== "granted" &&
+        (await handle.requestPermission(opts)) !== "granted"
+      )
+        handle = null;
+    }
+    if (!handle) {
+      handle = await window.showSaveFilePicker({
+        suggestedName: name,
+        types: [
+          {
+            description: "Comps backup",
+            accept: { "application/json": [".json"] },
+          },
+        ],
+      });
+      await saveHandle({ handle, forName: name });
+    }
+    const w = await handle.createWritable();
+    await w.write(text);
+    await w.close();
+    return handle.name;
+  }
+
+  function download(text) {
+    const blob = new Blob([text], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `cmcomps-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = backupFileName();
     document.body.appendChild(a);
     a.click();
     setTimeout(() => {
       URL.revokeObjectURL(a.href);
       a.remove();
     }, 500);
+  }
+
+  $("#bk-down").addEventListener("click", async () => {
+    if (saveTimer) flush();
+    const backup = L.makeBackup(DATA);
+    if (getName()) backup.name = getName();
+    const text = JSON.stringify(backup, null, 1);
+    if (window.showSaveFilePicker) {
+      try {
+        status(`Backup saved to ${await saveToSameFile(text)}`);
+        return;
+      } catch (e) {
+        if (e && e.name === "AbortError") return; // fechou a janela de salvar
+        // qualquer outro problema: baixa o arquivo do jeito normal
+      }
+    }
+    download(text);
   });
 
   $("#bk-file").addEventListener("change", async (e) => {
@@ -829,7 +956,9 @@
     e.target.value = "";
     if (!file) return;
     try {
-      const data = L.parseBackup(await file.text());
+      const text = await file.text();
+      const data = L.parseBackup(text);
+      const name = JSON.parse(text).name;
       const n = Object.keys(data).length;
       const hasData = Object.keys(L.serialize(DATA).data).length > 0;
       if (
@@ -840,6 +969,10 @@
       )
         return;
       DATA = data;
+      if (typeof name === "string" && name && !getName()) {
+        setName(name);
+        nameInput.value = name;
+      }
       flush();
       status(`Backup loaded: ${n} PvPs`);
       route();

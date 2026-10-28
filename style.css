@@ -1722,3 +1722,37 @@ select[name="st"][class*="st-"] {
   background: var(--pink-soft);
   box-shadow: none;
 }
+
+/* affinity de cada opção na escolha de parents */
+.pick .im {
+  position: relative;
+}
+.pick .im .aff {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  min-width: 26px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* nome da pessoa no rodapé (dá nome ao arquivo de backup) */
+.foot .me {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.foot .me input {
+  width: 130px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--fg);
+}

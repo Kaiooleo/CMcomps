@@ -82,10 +82,18 @@
     <footer class="wrap foot">
       <p>
         Your teams are saved <b>in this browser</b>. To move them to another
-        device or keep them safe if you clear the browser, download a backup.
+        device or keep them safe if you clear the browser, save a backup.
       </p>
       <div class="confirm">
-        <button class="btn" type="button" id="bk-down">Download backup</button
+        <label class="me"
+          >Name<input
+            id="me-name"
+            type="text"
+            maxlength="30"
+            autocomplete="nickname"
+            placeholder="Your name"
+        /></label>
+        <button class="btn" type="button" id="bk-down">Save backup</button
         ><label class="btn" for="bk-file" style="cursor: pointer"
           >Load backup</label
         ><input
@@ -107,7 +115,7 @@
           placeholder="Search by name"
           autocomplete="off"
         />
-        <button class="btn danger" id="pk-remove" type="button">Remover</button>
+        <button class="btn danger" id="pk-remove" type="button">Remove</button>
         <button class="btn" id="pk-close" type="button" aria-label="Close">
           ✕
         </button>
