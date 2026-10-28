@@ -39,8 +39,8 @@ img {
   --accent: #1b86ad;
   --accent-soft: #d5eff8;
   --accent-ink: #ffffff;
-  --pink: #2b3bc4;
-  --pink-soft: #dde1fb;
+  --pink: #d63f86;
+  --pink-soft: #fbe1ee;
   --loh: #c9302c;
   --gold: #b98a12;
   --silver: #7b8794;
@@ -76,8 +76,8 @@ img {
     --accent: #8fd8ec;
     --accent-soft: #0f2c38;
     --accent-ink: #07121a;
-    --pink: #6a7cff;
-    --pink-soft: #1a2052;
+    --pink: #f070ab;
+    --pink-soft: #3a1f2c;
     --loh: #f0625e;
     --gold: #e2b843;
     --silver: #aab4bf;
@@ -102,8 +102,8 @@ img {
   --accent: #8fd8ec;
   --accent-soft: #0f2c38;
   --accent-ink: #07121a;
-  --pink: #6a7cff;
-  --pink-soft: #1a2052;
+  --pink: #f070ab;
+  --pink-soft: #3a1f2c;
   --loh: #f0625e;
   --gold: #e2b843;
   --silver: #aab4bf;
@@ -1518,10 +1518,6 @@ img.spr {
 .pg .p {
   width: 40px;
   height: 40px;
-  box-shadow: 0 0 0 2px var(--b1);
-}
-.pg2 .p {
-  box-shadow: 0 0 0 2px var(--pink);
 }
 .pg .g {
   width: 26px;
