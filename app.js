@@ -249,6 +249,23 @@
     },
   };
 
+  /** Vitórias (finais em 1st) por distância, com quantas finais foram registradas. */
+  function winBars(byDist) {
+    const keys = ["Sprint", "Mile", "Medium", "Long", "Dirt"];
+    const max = Math.max(
+      1,
+      ...keys.map((k) => (byDist[k] ? byDist[k].wins : 0)),
+    );
+    if (!keys.some((k) => byDist[k]))
+      return '<p class="empty">Nothing recorded yet.</p>';
+    return `<div class="bars wrbars">${keys
+      .map((k) => {
+        const b = byDist[k];
+        return `<div class="bar"><span>${k}</span><span class="t"><i style="width:${b ? (b.wins / max) * 100 : 0}%"></i></span><b class="num">${b ? b.wins : "–"}</b><small>${b ? `of ${b.finals} final${b.finals > 1 ? "s" : ""}` : ""}</small></div>`;
+      })
+      .join("")}</div>`;
+  }
+
   /** Barras de WR (0–100%): [{ label, v, sub, cls }]; sem dado, a barra fica vazia. */
   function wrBars(rows) {
     if (!rows.some((r) => r.v != null))
@@ -322,17 +339,8 @@
         <div><span class="label">Worst WR</span><b class="num">${s.worst ? pct(s.worst.sc) : "–"}</b>${s.worst ? `<a href="#cm-${esc(s.worst.id)}">${esc(s.worst.id)}</a>` : ""}</div>
       </div>
     </div>
-    <div class="panel"><div class="label">WR by distance</div>
-      ${wrBars(
-        ["Sprint", "Mile", "Medium", "Long", "Dirt"].map((k) => {
-          const b = s.byDist[k];
-          return {
-            label: k,
-            v: b ? b.sum / b.n : null,
-            sub: b ? `${b.n} PvP${b.n > 1 ? "s" : ""}` : "",
-          };
-        }),
-      )}
+    <div class="panel"><div class="label">Wins by distance</div>
+      ${winBars(s.byDist)}
     </div>
   </section>
   <section class="row2">

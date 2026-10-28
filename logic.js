@@ -208,7 +208,7 @@
     const cards = {};
     const borrow = {};
     const scores = [];
-    const byDist = {}; // distância (ou Dirt) → { sum, n } do WR dos rounds
+    const byDist = {}; // distância (ou Dirt) → { wins: 1st, finals: finais registradas }
     const byScenario = []; // [{ sc, sum, n }] na ordem dos PvPs
     const parents = {}; // P1 e P2 usados (todas as Umas)
     const grandparents = {}; // avós usados (todas as Umas)
@@ -216,15 +216,17 @@
       const d = data[cm.id];
       if (!d || !isCounted(cm.id)) continue;
       if (pl[d.pl] !== undefined) pl[d.pl]++;
+      if (pl[d.pl] !== undefined) {
+        const dk = cm.su === "Dirt" ? "Dirt" : dist(cm.m) || cm.dc;
+        if (dk) {
+          const b = (byDist[dk] = byDist[dk] || { wins: 0, finals: 0 });
+          b.finals++;
+          if (d.pl === "1st") b.wins++;
+        }
+      }
       const sc = ratingScore(d.rat);
       if (sc > 0) {
         scores.push({ id: cm.id, sc, pl: d.pl });
-        const dk = cm.su === "Dirt" ? "Dirt" : dist(cm.m) || cm.dc;
-        if (dk) {
-          byDist[dk] = byDist[dk] || { sum: 0, n: 0 };
-          byDist[dk].sum += sc;
-          byDist[dk].n++;
-        }
         if (cm.sc) {
           let row = byScenario.find((r) => r.sc === cm.sc);
           if (!row) byScenario.push((row = { sc: cm.sc, sum: 0, n: 0 }));
