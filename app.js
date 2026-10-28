@@ -232,35 +232,6 @@
   </section>`;
   }
 
-  function scoreChart(scores, avg) {
-    if (!scores.length)
-      return '<p class="empty">WR shows up here once you fill in the rounds of a PvP.</p>';
-    const W = 640,
-      H = 200,
-      LEFT = 34,
-      RIGHT = 8,
-      TOP = 12,
-      BOTTOM = 28;
-    const bw = (W - LEFT - RIGHT) / scores.length;
-    const y = (v) => TOP + (1 - v) * (H - TOP - BOTTOM);
-    const every = Math.max(1, Math.ceil(scores.length / 12));
-    let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="WR by PvP">`;
-    for (const t of [0, 0.25, 0.5, 0.75, 1])
-      s += `<line x1="${LEFT}" x2="${W - RIGHT}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)" stroke-width="1"/><text x="${LEFT - 6}" y="${y(t) + 3}" text-anchor="end">${t * 100}%</text>`;
-    scores.forEach((d, i) => {
-      const x = LEFT + i * bw;
-      const w = Math.max(3, bw - 4);
-      const h = y(0) - y(d.sc);
-      const r = Math.min(4, w / 2, h);
-      s += `<path d="M${x + 2},${y(0)} v${-(h - r)} q0,${-r} ${r},${-r} h${w - 2 * r} q${r},0 ${r},${r} v${h - r} z" fill="${d.pl === "1st" ? "var(--accent)" : "var(--faint)"}" />`;
-      s += `<rect class="hit" x="${x}" y="${TOP}" width="${bw}" height="${H - TOP - BOTTOM}" fill="transparent" data-i="${i}"/>`;
-      if (i % every === 0)
-        s += `<text x="${x + bw / 2}" y="${H - BOTTOM + 14}" text-anchor="middle">${esc(d.id)}</text>`;
-    });
-    s += `<line x1="${LEFT}" x2="${W - RIGHT}" y1="${y(avg)}" y2="${y(avg)}" stroke="var(--fg)" stroke-width="1.5" stroke-dasharray="4 4"/><text x="${W - RIGHT}" y="${y(avg) - 5}" text-anchor="end" style="fill:var(--fg);font-weight:700">Average WR ${pct(avg)}</text>`;
-    return s + '</svg><div class="tip" hidden></div>';
-  }
-
   /* ---------- rankings (top 5 no Resumo, lista completa em página própria) ---------- */
   const TOP = 5;
   const RANKINGS = {
@@ -352,8 +323,17 @@
         <div><span class="label">Worst WR</span><b class="num">${s.worst ? pct(s.worst.sc) : "–"}</b>${s.worst ? `<a href="#cm-${esc(s.worst.id)}">${esc(s.worst.id)}</a>` : ""}</div>
       </div>
     </div>
-    <div class="panel"><div class="label">WR by PvP <span style="text-transform:none;letter-spacing:0;font-weight:500">· blue = 1st</span></div>
-      <div class="chart" id="chart" style="margin-top:12px">${scoreChart(s.scores, s.avg)}</div>
+    <div class="panel"><div class="label">WR by distance</div>
+      ${wrBars(
+        ["Sprint", "Mile", "Medium", "Long", "Dirt"].map((k) => {
+          const b = s.byDist[k];
+          return {
+            label: k,
+            v: b ? b.sum / b.n : null,
+            sub: b ? `${b.n} PvP${b.n > 1 ? "s" : ""}` : "",
+          };
+        }),
+      )}
     </div>
   </section>
   <section class="row2">
@@ -367,22 +347,8 @@
       }).join("")}</div>
     </div>
   </section>
-  <section class="row2 even">
-    <div class="panel"><div class="label">WR by distance</div>
-      ${wrBars(
-        ["Sprint", "Mile", "Medium", "Long", "Dirt"].map((k) => {
-          const b = s.byDist[k];
-          return {
-            label: k,
-            v: b ? b.sum / b.n : null,
-            sub: b ? `${b.n} PvP${b.n > 1 ? "s" : ""}` : "",
-          };
-        }),
-      )}
-    </div>
-    <div class="panel"><div class="label">WR by scenario</div>
+  <section class="panel"><div class="label">WR by scenario</div>
     ${wrBars(s.byScenario.map((r) => ({ label: r.sc, v: r.avg, sub: `${r.n} PvP${r.n > 1 ? "s" : ""}` })))}
-    </div>
   </section>
   <section class="panel">${panelHead("rank-cards", s.cards.length)}${podium(s.cards.slice(0, TOP), false)}</section>
   <section class="panel">${panelHead("rank-borrowed", s.borrow.length)}${podium(s.borrow.slice(0, TOP), true)}</section>
@@ -395,24 +361,6 @@
     </div>
   </section>
   <section class="panel">${panelHead("rank-wincards", s.winCards.length)}${podium(s.winCards.slice(0, TOP), false)}</section>`;
-
-    const chart = $("#chart");
-    const tip = chart && chart.querySelector(".tip");
-    if (!tip) return;
-    chart.querySelectorAll(".hit").forEach((bar) => {
-      const d = s.scores[+bar.dataset.i];
-      bar.style.cursor = "pointer";
-      bar.addEventListener("mouseenter", () => {
-        const box = chart.getBoundingClientRect();
-        const rb = bar.getBoundingClientRect();
-        tip.hidden = false;
-        tip.textContent = `${d.id} · ${pct(d.sc)}${d.pl ? " · " + d.pl : ""}`;
-        tip.style.left = rb.left - box.left + rb.width / 2 + "px";
-        tip.style.top = rb.top - box.top + (1 - d.sc) * rb.height + "px";
-      });
-      bar.addEventListener("mouseleave", () => (tip.hidden = true));
-      bar.addEventListener("click", () => (location.hash = "cm-" + d.id));
-    });
   }
 
   /* ---------- lista de PvPs ---------- */
