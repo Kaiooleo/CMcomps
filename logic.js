@@ -212,7 +212,6 @@
     const byScenario = []; // [{ sc, sum, n }] na ordem dos PvPs
     const parents = {}; // P1 e P2 usados (todas as Umas)
     const grandparents = {}; // avós usados (todas as Umas)
-    const winCards = {}; // cartas das Aces nos PvPs em que ficou 1st
     for (const cm of cms) {
       const d = data[cm.id];
       if (!d || !isCounted(cm.id)) continue;
@@ -241,10 +240,6 @@
           m[n] = (m[n] || 0) + 1;
         });
         if (t.ro === "Debuffer") continue;
-        if (d.pl === "1st")
-          (t.d || []).forEach(
-            (k) => k && (winCards[k] = (winCards[k] || 0) + 1),
-          );
         aces[t.n] = (aces[t.n] || 0) + 1;
         if (t.st) styles[t.st] = (styles[t.st] || 0) + 1;
         (t.d || []).forEach((k, i) => {
@@ -271,7 +266,6 @@
       borrow: top(borrow, Infinity),
       parents: top(parents, Infinity),
       grandparents: top(grandparents, Infinity),
-      winCards: top(winCards, Infinity),
       byDist,
       byScenario: byScenario.map((r) => ({
         sc: r.sc,

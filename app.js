@@ -247,7 +247,6 @@
       title: "Most Used Grandparents",
       key: "grandparents",
     },
-    "rank-wincards": { title: "Cards in 1st Places", key: "winCards" },
   };
 
   /** Barras de WR (0–100%): [{ label, v, sub, cls }]; sem dado, a barra fica vazia. */
@@ -359,8 +358,7 @@
     <div class="panel">${panelHead("rank-grandparents", s.grandparents.length)}
       ${s.grandparents.length ? aceGrid(s.grandparents.slice(0, TOP)) : '<p class="empty">Nothing recorded yet.</p>'}
     </div>
-  </section>
-  <section class="panel">${panelHead("rank-wincards", s.winCards.length)}${podium(s.winCards.slice(0, TOP), false)}</section>`;
+  </section>`;
   }
 
   /* ---------- lista de PvPs ---------- */
