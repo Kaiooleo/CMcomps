@@ -529,7 +529,7 @@
             r,
             k,
           ) => `<label class="day"><span class="label">${ROUND_LABELS[k]}</span>
-          <input id="rat-${k}" inputmode="numeric" placeholder="5-4-3-5 or 17" value="${esc(r)}" class="${L.isValidRound(r) ? "" : "bad"}">
+          <input id="rat-${k}" inputmode="numeric" value="${esc(r)}" class="${L.isValidRound(r) ? "" : "bad"}">
           <span class="num dwr" id="dwr-${k}">${r && L.isValidRound(r) ? pct(L.ratingScore([r])) : ""}</span></label>`,
         )
         .join("")}</div>
