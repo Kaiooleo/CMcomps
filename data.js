@@ -27,7 +27,7 @@ window.CM_SCHEDULE = {
   CM18: { end: "2026-09-03" },
   CM19: { end: "2026-09-25" },
   CM20: { end: "2026-10-16" },
-  CM21: { end: "2026-11-06", est: true }, // GameTora: início estimado em 31/10
+  CM21: { end: "2026-11-06" }, // GameTora: início estimado em 31/10
 };
 
 // Para forçar um Current PvP manualmente (casos fora do padrão), use por exemplo:
