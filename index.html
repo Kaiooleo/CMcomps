@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta
@@ -9,7 +9,7 @@
     <title>Comps</title>
     <meta
       name="description"
-      content="Monte e acompanhe seus times de Champions Meeting e League of Heroes de Uma Musume: Umas, parents, deck, colocação e WR."
+      content="Build and track your Uma Musume Champions Meeting and League of Heroes teams: Umas, parents, deck, placement and WR."
     />
     <meta name="theme-color" content="#11131b" />
 
@@ -19,7 +19,7 @@
     <meta property="og:title" content="Comps" />
     <meta
       property="og:description"
-      content="Monte e acompanhe seus times de Champions Meeting e League of Heroes de Uma Musume."
+      content="Build and track your Uma Musume Champions Meeting and League of Heroes teams."
     />
     <meta property="og:url" content="https://kaiooleo.github.io/CMcomps/" />
     <meta
@@ -31,7 +31,7 @@
     <meta name="twitter:card" content="summary_large_image" />
 
     <!-- Ícones e instalação como app -->
-    <link rel="icon" href="icons/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="icons/favicon.png" type="image/png" />
     <link
       rel="icon"
       href="icons/icon-192.png"
@@ -56,8 +56,8 @@
             class="back"
             id="back"
             type="button"
-            aria-label="Voltar"
-            title="Voltar"
+            aria-label="Back"
+            title="Back"
             hidden
           >
             ←
@@ -72,7 +72,7 @@
           />Comps
         </div>
         <nav>
-          <a href="#resumo" id="nav-resumo">Resumo</a
+          <a href="#resumo" id="nav-resumo">Summary</a
           ><a href="#cms" id="nav-cms">PvP</a>
         </nav>
         <div class="status" id="status">Carregando…</div>
@@ -81,13 +81,13 @@
     <main class="wrap" id="app"></main>
     <footer class="wrap foot">
       <p>
-        Seus times ficam salvos <b>neste navegador</b>. Para levar para outro
-        aparelho ou não perder nada ao limpar o navegador, baixe um backup.
+        Your teams are saved <b>in this browser</b>. To move them to another
+        device or keep them safe if you clear the browser, download a backup.
       </p>
       <div class="confirm">
-        <button class="btn" type="button" id="bk-down">Baixar backup</button
+        <button class="btn" type="button" id="bk-down">Download backup</button
         ><label class="btn" for="bk-file" style="cursor: pointer"
-          >Carregar backup</label
+          >Load backup</label
         ><input
           type="file"
           id="bk-file"
@@ -99,16 +99,16 @@
 
     <dialog id="picker" aria-labelledby="pk-title">
       <div class="dhead">
-        <h2 id="pk-title">Escolher</h2>
+        <h2 id="pk-title">Choose</h2>
         <input
           class="search"
           id="pk-q"
           type="search"
-          placeholder="Buscar pelo nome"
+          placeholder="Search by name"
           autocomplete="off"
         />
         <button class="btn danger" id="pk-remove" type="button">Remover</button>
-        <button class="btn" id="pk-close" type="button" aria-label="Fechar">
+        <button class="btn" id="pk-close" type="button" aria-label="Close">
           ✕
         </button>
       </div>

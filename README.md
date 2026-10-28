@@ -1,4 +1,4 @@
-# CM Comps
+# Comps
 
 Site para montar e acompanhar times de Champions Meeting e League of Heroes de Uma Musume.
 

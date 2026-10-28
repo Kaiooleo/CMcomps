@@ -1,7 +1,7 @@
 {
   "name": "Comps",
   "short_name": "Comps",
-  "description": "Times de Champions Meeting e League of Heroes de Uma Musume.",
+  "description": "Uma Musume Champions Meeting and League of Heroes teams.",
   "lang": "pt-BR",
   "start_url": "./",
   "scope": "./",

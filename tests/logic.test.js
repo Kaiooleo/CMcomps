@@ -186,7 +186,7 @@ test("migração: corrige valores estranhos em vez de quebrar", () => {
 test("migração recusa dados de uma versão mais nova", () => {
   assert.throws(
     () => L.migrate({ v: L.SCHEMA + 1, data: {} }),
-    /versão mais nova/,
+    /newer version/,
   );
 });
 
@@ -204,10 +204,10 @@ test("backup: ida e volta preserva os dados e ignora PvPs vazios", () => {
 });
 
 test("backup: arquivo que não é do CM Comps é recusado", () => {
-  assert.throws(() => L.parseBackup("não é json"), /não é um backup/);
+  assert.throws(() => L.parseBackup("não é json"), /not a Comps backup/);
   assert.throws(
     () => L.parseBackup('{"app":"outro","data":{}}'),
-    /não é um backup/,
+    /not a Comps backup/,
   );
 });
 

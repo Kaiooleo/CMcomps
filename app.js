@@ -13,7 +13,7 @@
     window.CM_CONFIG || {},
   );
   const finalLabel = () =>
-    CONF.date ? fmtDate(CONF.date) + (CONF.est ? " (estimada)" : "") : "";
+    CONF.date ? fmtDate(CONF.date) + (CONF.est ? " (estimated)" : "") : "";
 
   const STORAGE_KEY = "cmcomps:data";
   const LEGACY_KEY = "cmcomps:data:v1"; // versão inicial (mapa puro, sem número de formato)
@@ -58,11 +58,14 @@
           "'": "&#39;",
         })[c],
     );
-  const pct = (x) => (Math.round(x * 1000) / 10).toLocaleString("pt-BR") + "%";
+  const pct = (x) => (Math.round(x * 1000) / 10).toLocaleString("en-US") + "%";
   const plClass = (p) => (p ? "pl-" + p.replace(" ", "") : "");
   const typeVar = (t) =>
     "var(--t-" + (t || "").toLowerCase() + ",var(--muted))";
-  const fmtDate = (d) => (d ? d.split("-").reverse().join("/") : "");
+  const MONTHS = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(" ");
+  const fmtShort = (d) =>
+    d ? `${MONTHS[+d.slice(5, 7) - 1]} ${+d.slice(8, 10)}` : "";
+  const fmtDate = (d) => (d ? `${fmtShort(d)}, ${d.slice(0, 4)}` : "");
   const cond = (c) => [c.se, c.we, c.gr].filter(Boolean).map(esc).join(" · ");
   const isLoh = (id) => id.startsWith("LOH");
   const status = (text, isError = false) => {
@@ -93,9 +96,9 @@
       }
     } catch (e) {
       status(
-        e && e.message && e.message.includes("versão")
+        e && e.message && e.message.includes("newer version")
           ? e.message
-          : "Não foi possível ler os dados salvos neste navegador.",
+          : "Could not read the data saved in this browser.",
         true,
       );
     }
@@ -104,7 +107,7 @@
 
   let saveTimer = null;
   function save() {
-    status("Salvando…");
+    status("Saving…");
     clearTimeout(saveTimer);
     saveTimer = setTimeout(flush, SAVE_DELAY);
   }
@@ -112,10 +115,10 @@
     saveTimer = null;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(L.serialize(DATA)));
-      status("Salvo neste navegador");
+      status("Saved in this browser");
     } catch (_) {
       status(
-        "Este navegador não deixou salvar. Use “Baixar backup” para não perder seus dados.",
+        "This browser blocked saving. Use “Download backup” so you don't lose your data.",
         true,
       );
     }
@@ -193,10 +196,10 @@
     const passed = finalPassed();
     const days = L.daysToFinal(CONF);
     const when = passed
-      ? `Final em ${finalLabel()} · concluída`
+      ? `Final on ${finalLabel()} · done`
       : days != null
-        ? `Final em ${finalLabel()} · ${days <= 0 ? "hoje" : days === 1 ? "amanhã" : `faltam ${days} dias`}`
-        : "Data da final não definida";
+        ? `Final on ${finalLabel()} · ${days <= 0 ? "today" : days === 1 ? "tomorrow" : `${days} days left`}`
+        : "Final date not set";
     const team = d ? d.team.filter((t) => t.n) : [];
     const teamHtml = team.length
       ? team
@@ -205,7 +208,7 @@
               `<a class="ct ${t.ro === "Debuffer" ? "debuff" : ""}" href="#cm-${esc(cm.id)}"><span class="av">${charImg(t.n, true)}</span><b>${esc(t.n)}</b><small>${esc(t.ro)}${t.st ? ` · <span class="${stClass(t.st)}">${esc(t.st)}</span>` : ""}</small></a>`,
           )
           .join("")
-      : `<a class="btn primary" href="#cm-${esc(cm.id)}" style="align-self:center;justify-self:start">Montar time</a>`;
+      : `<a class="btn primary" href="#cm-${esc(cm.id)}" style="align-self:center;justify-self:start">Build team</a>`;
     return `<section class="curhero">
     <a class="ch-main" href="#cm-${esc(cm.id)}">
       <div class="label" style="color:var(--accent)">Current PvP</div>
@@ -220,7 +223,7 @@
 
   function scoreChart(scores, avg) {
     if (!scores.length)
-      return '<p class="empty">O WR aparece aqui quando você preencher as rodadas de um CM.</p>';
+      return '<p class="empty">WR shows up here once you fill in the rounds of a PvP.</p>';
     const W = 640,
       H = 200,
       LEFT = 34,
@@ -263,7 +266,7 @@
     const r = RANKINGS[id];
     const more =
       total > TOP
-        ? `<a class="more" href="#${id}">Ver todas (${total}) →</a>`
+        ? `<a class="more" href="#${id}">See all (${total}) →</a>`
         : "";
     return `<div class="phead"><div class="label"${r.pink ? ' style="color:var(--pink)"' : ""}>${r.title}</div>${more}</div>`;
   }
@@ -282,7 +285,7 @@
     const r = RANKINGS[id];
     const list = L.computeStats(CAT.cms, DATA, counted)[r.key];
     const body = !list.length
-      ? '<p class="empty">Nada registrado ainda.</p>'
+      ? '<p class="empty">Nothing recorded yet.</p>'
       : r.key === "aces"
         ? aceGrid(list, 1)
         : podium(list, r.key === "borrow", true);
@@ -292,7 +295,7 @@
   }
 
   function podium(entries, borrowed, wrap = false) {
-    if (!entries.length) return '<p class="empty">Nada registrado ainda.</p>';
+    if (!entries.length) return '<p class="empty">Nothing recorded yet.</p>';
     return `<div class="podium${wrap ? " wrap" : ""}">${entries
       .map(([k, n], i) => {
         const c = CARD.get(k);
@@ -308,7 +311,7 @@
     const styleMax = Math.max(1, ...Object.values(s.styles));
     $("#app").innerHTML = `
   ${currentHero()}
-  ${empty ? `<div class="banner"><p>Nenhum resultado registrado ainda. Abra um PvP, monte seu time e marque a colocação para ver as estatísticas aqui.</p><a class="btn primary" href="#cms">Ver PvPs</a></div>` : ""}
+  ${empty ? `<div class="banner"><p>No results recorded yet. Open a PvP, build your team and set your placement to see stats here.</p><a class="btn primary" href="#cms">See PvPs</a></div>` : ""}
   <section class="hero">
     <div class="panel perf">
       <div class="label">Placed · Win rate</div>
@@ -320,13 +323,13 @@
         <div><span class="label">Worst WR</span><b class="num">${s.worst ? pct(s.worst.sc) : "–"}</b>${s.worst ? `<a href="#cm-${esc(s.worst.id)}">${esc(s.worst.id)}</a>` : ""}</div>
       </div>
     </div>
-    <div class="panel"><div class="label">WR by PvP <span style="text-transform:none;letter-spacing:0;font-weight:500">· azul = 1st</span></div>
+    <div class="panel"><div class="label">WR by PvP <span style="text-transform:none;letter-spacing:0;font-weight:500">· blue = 1st</span></div>
       <div class="chart" id="chart" style="margin-top:12px">${scoreChart(s.scores, s.avg)}</div>
     </div>
   </section>
   <section class="row2">
     <div class="panel">${panelHead("rank-aces", s.aces.length)}
-      ${s.aces.length ? aceGrid(s.aces.slice(0, TOP)) : '<p class="empty">Nada registrado ainda.</p>'}
+      ${s.aces.length ? aceGrid(s.aces.slice(0, TOP)) : '<p class="empty">Nothing recorded yet.</p>'}
     </div>
     <div class="panel"><div class="label">Style (Ace)</div>
       <div class="bars">${STYLES.map((st) => {
@@ -368,7 +371,7 @@
     const title = c.nm && c.nm !== "League of Heroes" ? c.nm : c.sc;
     let chips = "";
     if (ph === "current")
-      chips += `<span class="chip cur">Current PvP${CONF.date ? " · final " + fmtDate(CONF.date).slice(0, 5) + (CONF.est ? " (est.)" : "") : ""}</span>`;
+      chips += `<span class="chip cur">Current PvP${CONF.date ? " · final " + fmtShort(CONF.date) + (CONF.est ? " (est.)" : "") : ""}</span>`;
     if (ph === "future") chips += '<span class="chip none">Not counted</span>';
     if (d && d.pl)
       chips += `<span class="chip ${plClass(d.pl)}">${esc(d.pl)}</span>`;
@@ -406,9 +409,9 @@
       .join("");
     $("#app").innerHTML = `
   <section class="lhead"><h1>PvP</h1>
-    <div class="seg" role="group" aria-label="Tipo">${filters}</div>
-    <input class="search" id="lq" type="search" placeholder="Buscar por CM, cenário, pista, distância…" value="${esc(listQuery)}"></section>
-  <section class="tiles">${rows.length ? rows.map(tileHtml).join("") : '<p class="empty">Nenhum PvP encontrado.</p>'}</section>`;
+    <div class="seg" role="group" aria-label="Type">${filters}</div>
+    <input class="search" id="lq" type="search" placeholder="Search by CM, scenario, track, distance…" value="${esc(listQuery)}"></section>
+  <section class="tiles">${rows.length ? rows.map(tileHtml).join("") : '<p class="empty">No PvP found.</p>'}</section>`;
 
     const input = $("#lq");
     input.addEventListener("input", () => {
@@ -438,7 +441,7 @@
 
   function currentNote(id) {
     if (phase(id) !== "current") return "";
-    return `<div class="banner sched"><p><b>Current PvP.</b> ${finalPassed() ? "A final já passou e ele já conta nas estatísticas." : `Entra nas estatísticas depois da final${CONF.date ? ` (${finalLabel()})` : ""}${CONF.est ? `, com ${L.MARGIN_DAYS} dias de folga por ser data estimada` : ""}.`}</p></div>`;
+    return `<div class="banner sched"><p><b>Current PvP.</b> ${finalPassed() ? "The final is over and it now counts in the stats." : `It counts in the stats after the final${CONF.date ? ` (${finalLabel()})` : ""}${CONF.est ? `, plus ${L.MARGIN_DAYS} days since the date is estimated` : ""}.`}</p></div>`;
   }
 
   function pvpHead(cm, sub = "") {
@@ -484,7 +487,7 @@
   function umaCardHtml(cmId, t, k) {
     const href = `#uma-${esc(cmId)}-${k + 1}`;
     if (!t.n)
-      return `<a class="panel umacard empty" href="${href}"><span class="plus">+</span><span>Escolher Uma ${k + 1}</span></a>`;
+      return `<a class="panel umacard empty" href="${href}"><span class="plus">+</span><span>Choose Uma ${k + 1}</span></a>`;
     const mini = (items, img, borrowedAt = -1) =>
       items
         .map(
@@ -492,12 +495,12 @@
             `<span class="m ${j === borrowedAt ? "borrow" : ""} ${x ? "" : "off"}">${x ? img(x) : ""}</span>`,
         )
         .join("");
-    return `<a class="panel umacard ${t.ro === "Debuffer" ? "debuff" : ""}" href="${href}" title="Abrir ${esc(t.n)}">
+    return `<a class="panel umacard ${t.ro === "Debuffer" ? "debuff" : ""}" href="${href}" title="Open ${esc(t.n)}">
     <span class="art">${charImg(t.n, true)}</span>
     <span class="info">
       <b class="nm">${esc(t.n)}</b>
       <span class="tags"><span class="chip ${t.ro === "Debuffer" ? "deb" : "ace"}">${esc(t.ro)}</span>${t.st ? `<span class="chip ${stClass(t.st)}">${esc(t.st)}</span>` : ""}</span>
-      <span class="wrbox"><span class="label">WR</span><b class="num">${umaWr(t)}</b><small>${t.w != null ? `${t.w} / ${L.WINS_TOTAL} wins` : "sem wins"}</small></span>
+      <span class="wrbox"><span class="label">WR</span><b class="num">${umaWr(t)}</b><small>${t.w != null ? `${t.w} / ${L.WINS_TOTAL} wins` : "no wins"}</small></span>
     </span>
     <span class="minis">
       <span class="label">Parents</span>${t.p.some(Boolean) ? parentsSummary(t.p) : '<span class="none">—</span>'}
@@ -519,14 +522,14 @@
     <div class="panel"><div class="label">Final</div>
       <div class="places" role="group" aria-label="Final">${[...PLACES, ""].map((p) => `<button type="button" class="p-${p ? p.replace(" ", "") : "none"}" data-pl="${p}" aria-pressed="${d.pl === p}">${p || "No result"}</button>`).join("")}</div>
     </div>
-    <div class="panel"><div class="label">Rounds <span style="text-transform:none;letter-spacing:0;font-weight:500">· vitórias de cada tentativa (5-4-3-5) ou o total do dia (17)</span></div>
+    <div class="panel"><div class="label">Rounds</div>
       <div class="rounds">${d.rat
         .map(
           (
             r,
             k,
           ) => `<label class="day"><span class="label">${ROUND_LABELS[k]}</span>
-          <input id="rat-${k}" inputmode="numeric" placeholder="5-4-3-5 ou 17" value="${esc(r)}" class="${L.isValidRound(r) ? "" : "bad"}">
+          <input id="rat-${k}" inputmode="numeric" placeholder="5-4-3-5 or 17" value="${esc(r)}" class="${L.isValidRound(r) ? "" : "bad"}">
           <span class="num dwr" id="dwr-${k}">${r && L.isValidRound(r) ? pct(L.ratingScore([r])) : ""}</span></label>`,
         )
         .join("")}</div>
@@ -570,7 +573,7 @@
       .join("");
     $("#app").innerHTML = `
   ${pvpHead(cm, ` <span class="sub">· Uma ${k + 1}</span>`)}
-  <nav class="seg umatabs" aria-label="Umas deste PvP">${tabs}</nav>
+  <nav class="seg umatabs" aria-label="Umas in this PvP">${tabs}</nav>
   <section>${runnerHtml(t, k, true)}</section>`;
     bindRunner(document.querySelector(".runner"), t, k, () => viewUma(id, k));
     // abas: troca de Uma sem criar um passo a mais no "voltar" do navegador
@@ -649,7 +652,7 @@
       )
       .join("");
     return `<section class="affinity" aria-label="Affinity">
-      <div class="afftot ${any ? "" : "off"}"><span class="label">Affinity</span><b class="num">${any ? a.total : "—"}</b>${any ? `<span class="mark" title="${a.mark === "◎" ? "151 ou mais" : a.mark === "○" ? "51 a 150" : "até 50"}">${a.mark}</span>` : ""}</div>
+      <div class="afftot ${any ? "" : "off"}"><span class="label">Affinity</span><b class="num">${any ? a.total : "—"}</b>${any ? `<span class="mark" title="${a.mark === "◎" ? "151 or more" : a.mark === "○" ? "51 to 150" : "up to 50"}">${a.mark}</span>` : ""}</div>
       <ul class="affparts">${rows}</ul>
     </section>`;
   }
@@ -666,7 +669,7 @@
         PAR[j],
       );
     const lbSelect = (j) =>
-      `<select class="lb" data-lb="${j}" aria-label="Limit break da carta ${j + 1}"><option value=""></option>${L.LB_LABELS.map((x, n) => `<option value="${n}" ${t.lb[j] === n ? "selected" : ""}>${x}</option>`).join("")}</select>`;
+      `<select class="lb" data-lb="${j}" aria-label="Limit break of card ${j + 1}"><option value=""></option>${L.LB_LABELS.map((x, n) => `<option value="${n}" ${t.lb[j] === n ? "selected" : ""}>${x}</option>`).join("")}</select>`;
     const deck = t.d
       .map((c, j) => {
         const borrowed = j === L.BORROWED_SLOT;
@@ -683,11 +686,11 @@
       .join("");
     return `<article class="panel runner ${big ? "big" : ""} ${t.ro === "Debuffer" ? "debuff" : ""}" data-k="${k}">
     <div class="rtop">${slot("main", t.n ? charImg(t.n, true) : "", "", t.n ? `Change ${t.n}` : "Choose Uma", '<span class="plus">+</span>')}
-      <div><button type="button" class="rname">${t.n ? esc(t.n) : `<span style="color:var(--muted)">Escolher Uma ${k + 1}</span>`}</button>
+      <div><button type="button" class="rname">${t.n ? esc(t.n) : `<span style="color:var(--muted)">Choose Uma ${k + 1}</span>`}</button>
         <div class="fields">
-          <label class="nolab"><select name="ro" aria-label="Ace ou Debuffer">${ROLES.map((r) => `<option ${t.ro === r ? "selected" : ""}>${r}</option>`).join("")}</select></label>
+          <label class="nolab"><select name="ro" aria-label="Ace or Debuffer">${ROLES.map((r) => `<option ${t.ro === r ? "selected" : ""}>${r}</option>`).join("")}</select></label>
           <label class="nolab"><select name="st" class="${stClass(t.st)}" aria-label="Style"><option value="">Style —</option>${STYLES.map((s) => `<option ${t.st === s ? "selected" : ""}>${s}</option>`).join("")}</select></label>
-          <label>Wins<span class="wins"><input name="w" type="number" min="0" max="${L.WINS_TOTAL}" inputmode="numeric" value="${t.w ?? ""}" aria-label="Wins (de ${L.WINS_TOTAL})"><span class="of">/ ${L.WINS_TOTAL}</span></span></label>
+          <label>Wins<span class="wins"><input name="w" type="number" min="0" max="${L.WINS_TOTAL}" inputmode="numeric" value="${t.w ?? ""}" aria-label="Wins (out of ${L.WINS_TOTAL})"><span class="of">/ ${L.WINS_TOTAL}</span></span></label>
           <div class="wrbox"><span class="label">WR</span><b class="num wrp">${umaWr(t)}</b></div>
         </div></div></div>
     <div class="lower">
@@ -766,7 +769,7 @@
             );
     list.innerHTML = items.length
       ? items.join("")
-      : '<p class="empty">Nada encontrado com esse filtro.</p>';
+      : '<p class="empty">Nothing found with this filter.</p>';
     list
       .querySelectorAll("button")
       .forEach((b) => b.addEventListener("click", () => pick(b.dataset.v)));
@@ -816,13 +819,13 @@
       if (
         hasData &&
         !confirm(
-          `Carregar este backup (${n} PvPs)? Ele substitui o que está salvo neste navegador.`,
+          `Load this backup (${n} PvPs)? It replaces what is saved in this browser.`,
         )
       )
         return;
       DATA = data;
       flush();
-      status(`Backup carregado: ${n} PvPs`);
+      status(`Backup loaded: ${n} PvPs`);
       route();
     } catch (err) {
       status(err.message, true);
@@ -850,7 +853,7 @@
   /* ---------- início ---------- */
   DATA = load();
   if (!$("#status").classList.contains("err"))
-    status(Object.keys(DATA).length ? "Salvo neste navegador" : "Pronto");
+    status(Object.keys(DATA).length ? "Saved in this browser" : "Ready");
   route();
 
   // PWA: permite instalar e abrir sem internet (só em http/https)

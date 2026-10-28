@@ -279,7 +279,7 @@
     }
     if (v > SCHEMA) {
       throw new Error(
-        `Estes dados são de uma versão mais nova do site (formato ${v}). Atualize a página.`,
+        `This data is from a newer version of the site (format ${v}). Reload the page.`,
       );
     }
     // v0 → v1: mesmo conteúdo, só passa a ser normalizado e ganhar número de formato.
@@ -327,10 +327,10 @@
     try {
       j = JSON.parse(text);
     } catch (_) {
-      throw new Error("Esse arquivo não é um backup do CM Comps.");
+      throw new Error("This file is not a Comps backup.");
     }
     if (!j || j.app !== "cmcomps" || typeof j.data !== "object")
-      throw new Error("Esse arquivo não é um backup do CM Comps.");
+      throw new Error("This file is not a Comps backup.");
     return migrate(j);
   }
 

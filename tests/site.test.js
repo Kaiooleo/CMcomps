@@ -103,7 +103,7 @@ test("preencher um PvP salva no navegador e continua lá depois de recarregar", 
   assert.equal(await page.textContent(".runner .wrp"), "50%");
   await page.waitForFunction(
     () =>
-      document.querySelector("#status").textContent === "Salvo neste navegador",
+      document.querySelector("#status").textContent === "Saved in this browser",
   );
 
   await page.reload();
@@ -141,7 +141,7 @@ test("baixar backup e carregar em outro navegador traz os mesmos dados", async (
   await a.page.click('[data-pl="2nd"]');
   await a.page.waitForFunction(
     () =>
-      document.querySelector("#status").textContent === "Salvo neste navegador",
+      document.querySelector("#status").textContent === "Saved in this browser",
   );
   const [download] = await Promise.all([
     a.page.waitForEvent("download"),
@@ -161,9 +161,7 @@ test("baixar backup e carregar em outro navegador traz os mesmos dados", async (
   await b.page.goto(base);
   await b.page.setInputFiles("#bk-file", file);
   await b.page.waitForFunction(() =>
-    document
-      .querySelector("#status")
-      .textContent.startsWith("Backup carregado"),
+    document.querySelector("#status").textContent.startsWith("Backup loaded"),
   );
   await b.page.goto(base + "#cm-CM7");
   assert.equal(

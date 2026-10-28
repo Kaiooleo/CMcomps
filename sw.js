@@ -9,7 +9,7 @@
  *
  * Suba CACHE quando quiser forçar todos a baixarem tudo de novo.
  */
-const CACHE = "cmcomps-v5";
+const CACHE = "cmcomps-v6";
 const CORE = [
   "./",
   "index.html",
@@ -19,7 +19,7 @@ const CORE = [
   "logic.js",
   "app.js",
   "manifest.webmanifest",
-  "icons/favicon.svg",
+  "icons/favicon.png",
   "icons/cheval-chibi.webp",
   "icons/icon-192.png",
 ];
