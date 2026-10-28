@@ -208,7 +208,7 @@
     const cards = {};
     const borrow = {};
     const scores = [];
-    const byDist = {}; // distância (ou Dirt) → { wins: 1st, finals: finais registradas }
+    const byDist = {}; // "Turf Mile", "Dirt Medium"… → { wins: 1st, finals: finais registradas }
     const byScenario = []; // [{ sc, sum, n }] na ordem dos PvPs
     const parents = {}; // P1 e P2 usados (todas as Umas)
     const grandparents = {}; // avós usados (todas as Umas)
@@ -217,7 +217,8 @@
       if (!d || !isCounted(cm.id)) continue;
       if (pl[d.pl] !== undefined) pl[d.pl]++;
       if (pl[d.pl] !== undefined) {
-        const dk = cm.su === "Dirt" ? "Dirt" : dist(cm.m) || cm.dc;
+        const dd = dist(cm.m) || cm.dc;
+        const dk = dd && `${cm.su === "Dirt" ? "Dirt" : "Turf"} ${dd}`;
         if (dk) {
           const b = (byDist[dk] = byDist[dk] || { wins: 0, finals: 0 });
           b.finals++;

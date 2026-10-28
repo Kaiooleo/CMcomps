@@ -251,7 +251,14 @@
 
   /** Vitórias (finais em 1st) por distância, com quantas finais foram registradas. */
   function winBars(byDist) {
-    const keys = ["Sprint", "Mile", "Medium", "Long", "Dirt"];
+    const keys = [
+      "Turf Sprint",
+      "Turf Mile",
+      "Turf Medium",
+      "Turf Long",
+      "Dirt Mile",
+      "Dirt Medium",
+    ];
     const max = Math.max(
       1,
       ...keys.map((k) => (byDist[k] ? byDist[k].wins : 0)),

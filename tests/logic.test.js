@@ -442,9 +442,9 @@ test("estatísticas novas: wins por distância, WR por cenário; parents e avós
   };
   const s = L.computeStats(cms, data);
   // wins = finais em 1st; finals = finais com colocação marcada
-  assert.deepEqual(s.byDist.Sprint, { wins: 1, finals: 1 });
-  assert.deepEqual(s.byDist.Dirt, { wins: 0, finals: 1 });
-  assert.deepEqual(s.byDist.Long, { wins: 0, finals: 1 });
+  assert.deepEqual(s.byDist["Turf Sprint"], { wins: 1, finals: 1 });
+  assert.deepEqual(s.byDist["Dirt Mile"], { wins: 0, finals: 1 });
+  assert.deepEqual(s.byDist["Turf Long"], { wins: 0, finals: 1 });
   assert.deepEqual(
     s.byScenario.map((r) => [r.sc, r.n]),
     [
