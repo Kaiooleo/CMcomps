@@ -1591,9 +1591,55 @@ img.spr {
   box-shadow: none;
   background: transparent;
 }
-/* espaço reservado abaixo dos parents (detalhes de affinity, em breve) */
+/* ---------- affinity base abaixo dos parents ---------- */
 .runner.big .affinity {
-  min-height: 120px;
+  margin-top: 18px;
+  display: grid;
+  gap: 10px;
+}
+.afftot {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+.afftot .label {
+  margin-right: auto;
+}
+.afftot b {
+  font-size: 30px;
+  line-height: 1;
+}
+.afftot .mark {
+  font-size: 22px;
+  line-height: 1;
+  color: var(--b1);
+}
+.afftot.off b {
+  color: var(--faint);
+}
+.affparts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+  font-size: 13px;
+}
+.affparts li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 14px;
+}
+.affparts li:nth-child(4) {
+  margin-top: 6px;
+}
+.affparts li.off {
+  color: var(--faint);
 }
 
 /* ---------- página da Uma: campos do tamanho da arte e limit break ---------- */
@@ -1614,4 +1660,11 @@ img.spr {
   font-size: 12px;
   font-weight: 700;
   text-align: center;
+}
+
+/* celular: Parents (com a affinity) e Deck um embaixo do outro */
+@media (max-width: 560px) {
+  .runner.big .lower {
+    grid-template-columns: 1fr;
+  }
 }

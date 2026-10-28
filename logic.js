@@ -334,7 +334,73 @@
     return migrate(j);
   }
 
+  /* ---------- Affinity (compatibilidade) ---------- */
+
+  /** Id do personagem (igual para todas as versões dela) pelo nome do ícone: chr_icon_1006_... → "1006". */
+  function charaId(icon) {
+    const m = /chr_icon_(\d+)_/.exec(icon || "");
+    return m ? m[1] : null;
+  }
+
+  /**
+   * Segmentos da affinity base. Posições: -1 = a Uma; 0..5 = ordem de `p`
+   * (P1, GP1.1, GP1.2, P2, GP2.1, GP2.2).
+   */
+  const AFF_SEGMENTS = [
+    { label: "Uma · P1", ids: [-1, 0] },
+    { label: "Uma · P2", ids: [-1, 3] },
+    { label: "P1 · P2", ids: [0, 3] },
+    { label: "Uma · P1 · GP1.1", ids: [-1, 0, 1] },
+    { label: "Uma · P1 · GP1.2", ids: [-1, 0, 2] },
+    { label: "Uma · P2 · GP2.1", ids: [-1, 3, 4] },
+    { label: "Uma · P2 · GP2.2", ids: [-1, 3, 5] },
+  ];
+
+  /** △ abaixo de 51, ○ de 51 a 150, ◎ a partir de 151. */
+  function affinityMark(total) {
+    return total >= 151 ? "◎" : total >= 51 ? "○" : "△";
+  }
+
+  /**
+   * Pontos de afinidade de um grupo de personagens: soma dos grupos que
+   * todos têm em comum. Usa os dados do global quando todos já estão lá;
+   * senão, os do japonês. Mesmo personagem repetido vale 0 (o jogo não deixa).
+   */
+  function affinityOf(chars, aff) {
+    if (new Set(chars).size < chars.length) return 0;
+    const db = chars.every((c) => aff.gl.g[c]) ? aff.gl : aff.jp;
+    const sets = chars.map((c) => new Set(db.g[c] || []));
+    let sum = 0;
+    for (const t of sets[0])
+      if (sets.every((s) => s.has(t))) sum += db.p[t] || 1;
+    return sum;
+  }
+
+  /**
+   * Affinity base (sem bônus de G1) da Uma com os parents.
+   * `main` e `parents` são ids de personagem (ou null quando vazio).
+   * Cada segmento vem com `value: null` se falta alguém nele.
+   */
+  function affinity(main, parents, aff) {
+    const who = (i) => (i < 0 ? main : parents[i]);
+    const parts = AFF_SEGMENTS.map((s) => {
+      const chars = s.ids.map(who);
+      return {
+        label: s.label,
+        ids: s.ids,
+        value: aff && chars.every(Boolean) ? affinityOf(chars, aff) : null,
+      };
+    });
+    const total = parts.reduce((a, p) => a + (p.value || 0), 0);
+    return { total, mark: affinityMark(total), parts };
+  }
+
   return {
+    charaId,
+    AFF_SEGMENTS,
+    affinityMark,
+    affinityOf,
+    affinity,
     PLACES,
     SCHEMA,
     BORROWED_SLOT,

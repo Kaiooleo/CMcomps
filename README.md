@@ -17,6 +17,7 @@ Site para montar e acompanhar times de Champions Meeting e League of Heroes de U
 | `logic.js`             | Regras e cálculos: WR, o que conta, estatísticas, formato dos dados e backup      |
 | `app.js`               | Telas e interação: Resumo, lista de PvPs, página do PvP, seletor, salvar e backup |
 | `data.js`              | Current PvP, PvPs, personagens e cartas (não formatado de propósito)              |
+| `affinity.js`          | Grupos de afinidade de cada personagem (GameTora), para a affinity base           |
 | `img/s/`, `img/c/`     | Artes das Umas (512 px) e cartas (360×480) em alta, carregadas só quando aparecem |
 | `sp/`                  | Ícones das Umas agrupados em folhas (192 px)                                      |
 | `sw.js`                | Service worker: permite instalar e abrir sem internet                             |

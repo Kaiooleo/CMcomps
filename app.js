@@ -626,6 +626,24 @@
     );
   }
 
+  /** Affinity base da Uma com os parents: total em destaque e cada segmento. */
+  function affinityHtml(t) {
+    const id = (name) =>
+      name && CHAR.has(name) ? L.charaId(CHAR.get(name).i) : null;
+    const a = L.affinity(id(t.n), t.p.map(id), window.CM_AFFINITY);
+    const any = a.parts.some((p) => p.value !== null);
+    const rows = a.parts
+      .map(
+        (p) =>
+          `<li class="${p.value === null ? "off" : ""}"><span>${esc(p.label)}</span><b class="num">${p.value ?? "—"}</b></li>`,
+      )
+      .join("");
+    return `<section class="affinity" aria-label="Affinity">
+      <div class="afftot ${any ? "" : "off"}"><span class="label">Affinity</span><b class="num">${any ? a.total : "—"}</b>${any ? `<span class="mark" title="${a.mark === "◎" ? "151 ou mais" : a.mark === "○" ? "51 a 150" : "até 50"}">${a.mark}</span>` : ""}</div>
+      <ul class="affparts">${rows}</ul>
+    </section>`;
+  }
+
   function runnerHtml(t, k, big = false) {
     const slot = (cls, inner, attrs, label, empty, extra = "") =>
       `<button type="button" class="slot ${cls} ${inner ? "filled" : ""}" ${attrs} aria-label="${esc(label)}" title="${esc(label)}">${inner || empty}${extra}</button>`;
@@ -667,7 +685,7 @@
         <div class="tree">
           ${parent(0)}${parent(3)}
           ${parent(1)}${parent(2)}${parent(4)}${parent(5)}
-        </div>${big ? '<div class="affinity" aria-hidden="true"></div>' : ""}</div>
+        </div>${big ? affinityHtml(t) : ""}</div>
       <div><div class="label">Deck</div><div class="deck">${deck}</div></div>
     </div>
   </article>`;

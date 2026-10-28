@@ -301,3 +301,39 @@ test("limit break: 0 a 4 (MLB); dados antigos sem LB continuam válidos", () => 
   rec.team[0].lb[2] = 3;
   assert.ok(!L.isEmptyRecord(rec), "LB preenchido conta como dado salvo");
 });
+
+/* ---------- Affinity ---------- */
+global.window = global.window || {};
+require("../affinity.js");
+const AFF = global.window.CM_AFFINITY;
+
+test("id do personagem sai do nome do ícone", () => {
+  assert.equal(L.charaId("chr_icon_1006_100646_01.webp"), "1006");
+  assert.equal(L.charaId(""), null);
+});
+
+test("affinity base bate com a calculadora da GameTora (120)", () => {
+  // Uma: Oguri Cap · P1: Biwa Hayahide (Fuji Kiseki, Taiki Shuttle)
+  // P2: TM Opera O (Smart Falcon, Sakura Bakushin O)
+  const a = L.affinity(
+    "1006",
+    ["1023", "1005", "1010", "1015", "1046", "1041"],
+    AFF,
+  );
+  assert.deepEqual(
+    a.parts.map((p) => p.value),
+    [20, 22, 40, 10, 9, 10, 9],
+  );
+  assert.equal(a.total, 120);
+  assert.equal(a.mark, "○");
+});
+
+test("affinity: segmentos com alguém faltando ficam vazios e não somam", () => {
+  const a = L.affinity("1006", ["1023", null, null, null, null, null], AFF);
+  assert.equal(a.parts[0].value, 20);
+  assert.ok(a.parts.slice(1).every((p) => p.value === null));
+  assert.equal(a.total, 20);
+  assert.equal(a.mark, "△");
+  assert.equal(L.affinityMark(151), "◎");
+  assert.equal(L.affinityOf(["1006", "1006"], AFF), 0, "mesma personagem");
+});

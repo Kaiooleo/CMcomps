@@ -90,6 +90,12 @@ test("preencher um PvP salva no navegador e continua lá depois de recarregar", 
   await page.locator(".runner .main").click();
   await page.fill("#pk-q", "Oguri Cap");
   await page.locator("#pk-list button").first().click();
+  // affinity: só com a Uma ainda não há segmento; com P1 aparece Uma · P1
+  assert.equal(await page.textContent(".afftot b"), "—");
+  await page.locator('.runner [data-p="0"]').click();
+  await page.fill("#pk-q", "Biwa Hayahide");
+  await page.locator('#pk-list button[data-v="Biwa Hayahide"]').click();
+  assert.equal(await page.textContent(".afftot b"), "20");
   await page.locator('.runner [data-d="5"]').click();
   await page.locator("#pk-list button").first().click();
   await page.selectOption('.runner [data-lb="5"]', "4"); // MLB na emprestada
