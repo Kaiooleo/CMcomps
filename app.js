@@ -638,17 +638,19 @@
     card.querySelectorAll("[data-p]").forEach((b) =>
       b.addEventListener("click", () => {
         const j = +b.dataset.p;
-        // com a Uma escolhida, cada opção mostra a affinity total que a árvore
-        // teria com ela nesse lugar, e a lista vem da maior para a menor
+        // cada opção mostra a affinity que ela daria nesse lugar, da maior para
+        // a menor: parent → com a Uma; GP → com a Uma e o parent desse lado
         const main = charaIdOf(t.n);
-        const ids = t.p.map(charaIdOf);
-        const score = main
-          ? (name) => {
-              const p = ids.slice();
-              p[j] = charaIdOf(name);
-              return L.affinity(main, p, window.CM_AFFINITY).total;
-            }
-          : null;
+        const isParent = j === 0 || j === 3;
+        const parent = isParent ? null : charaIdOf(t.p[j < 3 ? 0 : 3]);
+        const score =
+          main && (isParent || parent)
+            ? (name) =>
+                L.affinityOf(
+                  [main, ...(parent ? [parent] : []), charaIdOf(name)],
+                  window.CM_AFFINITY,
+                )
+            : null;
         openPicker(
           "char",
           t.p[j],

@@ -106,6 +106,13 @@ test("preencher um PvP salva no navegador e continua lá depois de recarregar", 
   await page.fill("#pk-q", "Biwa Hayahide");
   await page.locator('#pk-list button[data-v="Biwa Hayahide"]').click();
   assert.equal(await page.textContent(".afftot b"), "20");
+  // GP: affinity da opção com a Uma e o parent desse lado (Oguri · Biwa · Fuji = 10)
+  await page.locator('.runner [data-p="1"]').click();
+  assert.equal(
+    await page.textContent('#pk-list button[data-v="Fuji Kiseki"] .aff'),
+    "10",
+  );
+  await page.click("#pk-close");
   await page.locator('.runner [data-d="5"]').click();
   await page.locator("#pk-list button").first().click();
   // carta nova entra como MLB, e dá para trocar
