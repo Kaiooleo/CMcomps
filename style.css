@@ -29,23 +29,28 @@ img {
 /* Layout: sticky header + tabs. Resumo = performance strip, score-by-CM chart, aces/styles, card podiums.
    CMs = tile grid; tile opens detail (result strip + three compact runner cards: info on top, parent triangle beside 2x3 deck). */
 :root {
-  --bg: #f3f6f1;
+  --bg: #f1f3fa;
   --surface: #ffffff;
-  --surface-2: #eaf0e7;
-  --line: #d6ded1;
-  --fg: #1d2420;
-  --muted: #5d6b62;
-  --faint: #8c998f;
-  --accent: #23864f;
-  --accent-soft: #d6ecdd;
+  --surface-2: #e6f1f6;
+  --line: #cfdfe8;
+  --fg: #11131e;
+  --muted: #555b77;
+  --faint: #8a90aa;
+  --accent: #1b86ad;
+  --accent-soft: #d5eff8;
   --accent-ink: #ffffff;
-  --pink: #d63f86;
-  --pink-soft: #fbe1ee;
+  --pink: #2b3bc4;
+  --pink-soft: #dde1fb;
   --loh: #c9302c;
   --gold: #b98a12;
   --silver: #7b8794;
   --bronze: #a8643a;
-  --b1: #3f6fd1;
+  --b1: #1b86ad;
+  --st-runaway: #2a9fd0;
+  --st-front: #0090c8;
+  --st-pace: #00a048;
+  --st-late: #d9601e;
+  --st-end: #cc0000;
   --t-speed: #2f7fe0;
   --t-stamina: #e0523f;
   --t-power: #d89a12;
@@ -61,44 +66,54 @@ img {
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #111613;
-    --surface: #1a211d;
-    --surface-2: #232c26;
-    --line: #313c35;
-    --fg: #e6ece7;
-    --muted: #9aa89f;
-    --faint: #6f7d74;
-    --accent: #4cc283;
-    --accent-soft: #1f3a2a;
-    --accent-ink: #0d1a12;
-    --pink: #f070ab;
-    --pink-soft: #3a1f2c;
+    --bg: #08090e;
+    --surface: #11131b;
+    --surface-2: #161d26;
+    --line: #23303d;
+    --fg: #e9ebf5;
+    --muted: #93a7b8;
+    --faint: #686e8f;
+    --accent: #8fd8ec;
+    --accent-soft: #0f2c38;
+    --accent-ink: #07121a;
+    --pink: #6a7cff;
+    --pink-soft: #1a2052;
     --loh: #f0625e;
     --gold: #e2b843;
     --silver: #aab4bf;
     --bronze: #d58a5c;
-    --b1: #7da0f0;
+    --b1: #8fd8ec;
+    --st-runaway: #96dcf8;
+    --st-front: #00b0f0;
+    --st-pace: #00b050;
+    --st-late: #e9712f;
+    --st-end: #ff4a4a;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #111613;
-  --surface: #1a211d;
-  --surface-2: #232c26;
-  --line: #313c35;
-  --fg: #e6ece7;
-  --muted: #9aa89f;
-  --faint: #6f7d74;
-  --accent: #4cc283;
-  --accent-soft: #1f3a2a;
-  --accent-ink: #0d1a12;
-  --pink: #f070ab;
-  --pink-soft: #3a1f2c;
+  --bg: #08090e;
+  --surface: #11131b;
+  --surface-2: #161d26;
+  --line: #23303d;
+  --fg: #e9ebf5;
+  --muted: #93a7b8;
+  --faint: #686e8f;
+  --accent: #8fd8ec;
+  --accent-soft: #0f2c38;
+  --accent-ink: #07121a;
+  --pink: #6a7cff;
+  --pink-soft: #1a2052;
   --loh: #f0625e;
   --gold: #e2b843;
   --silver: #aab4bf;
   --bronze: #d58a5c;
-  --b1: #7da0f0;
+  --b1: #8fd8ec;
+  --st-runaway: #96dcf8;
+  --st-front: #00b0f0;
+  --st-pace: #00b050;
+  --st-late: #e9712f;
+  --st-end: #ff4a4a;
   color-scheme: dark;
 }
 * {
@@ -163,12 +178,11 @@ header {
   align-items: center;
   gap: 8px;
 }
-.brand i {
-  display: inline-block;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: conic-gradient(var(--accent) 0 75%, var(--pink) 75% 100%);
+.brand img {
+  width: 40px;
+  height: 40px;
+  margin: -8px 0 -8px -4px;
+  object-fit: contain;
 }
 nav {
   display: flex;
@@ -1667,4 +1681,34 @@ img.spr {
   .runner.big .lower {
     grid-template-columns: 1fr;
   }
+}
+
+/* ---------- cores de cada estilo (as mesmas da planilha) ---------- */
+.st-runaway {
+  --st: var(--st-runaway);
+}
+.st-front {
+  --st: var(--st-front);
+}
+.st-pace {
+  --st: var(--st-pace);
+}
+.st-late {
+  --st: var(--st-late);
+}
+.st-end {
+  --st: var(--st-end);
+}
+.bar[class*="st-"] .t i {
+  background: var(--st);
+}
+.bar[class*="st-"] > span:first-child,
+.chip[class*="st-"],
+small [class*="st-"],
+select[name="st"][class*="st-"] {
+  color: var(--st);
+  font-weight: 600;
+}
+.chip[class*="st-"] {
+  border-color: color-mix(in srgb, var(--st) 55%, transparent);
 }

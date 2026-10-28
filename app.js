@@ -26,6 +26,15 @@
     "Late Surger",
     "End Closer",
   ];
+  /** Classe de cor de cada estilo (mesmas cores da planilha). */
+  const ST_CLASS = {
+    Runaway: "st-runaway",
+    "Front Runner": "st-front",
+    "Pace Chaser": "st-pace",
+    "Late Surger": "st-late",
+    "End Closer": "st-end",
+  };
+  const stClass = (st) => ST_CLASS[st] || "";
   const ROLES = ["Ace", "Debuffer"];
   const TYPES = ["Speed", "Stamina", "Power", "Guts", "Wit", "Pal", "Group"];
   const PAR = ["P1", "GP1.1", "GP1.2", "P2", "GP2.1", "GP2.2"];
@@ -193,7 +202,7 @@
       ? team
           .map(
             (t) =>
-              `<a class="ct ${t.ro === "Debuffer" ? "debuff" : ""}" href="#cm-${esc(cm.id)}"><span class="av">${charImg(t.n, true)}</span><b>${esc(t.n)}</b><small>${esc(t.ro)}${t.st ? " · " + esc(t.st) : ""}</small></a>`,
+              `<a class="ct ${t.ro === "Debuffer" ? "debuff" : ""}" href="#cm-${esc(cm.id)}"><span class="av">${charImg(t.n, true)}</span><b>${esc(t.n)}</b><small>${esc(t.ro)}${t.st ? ` · <span class="${stClass(t.st)}">${esc(t.st)}</span>` : ""}</small></a>`,
           )
           .join("")
       : `<a class="btn primary" href="#cm-${esc(cm.id)}" style="align-self:center;justify-self:start">Montar time</a>`;
@@ -311,7 +320,7 @@
         <div><span class="label">Worst WR</span><b class="num">${s.worst ? pct(s.worst.sc) : "–"}</b>${s.worst ? `<a href="#cm-${esc(s.worst.id)}">${esc(s.worst.id)}</a>` : ""}</div>
       </div>
     </div>
-    <div class="panel"><div class="label">WR by PvP <span style="text-transform:none;letter-spacing:0;font-weight:500">· verde = 1st</span></div>
+    <div class="panel"><div class="label">WR by PvP <span style="text-transform:none;letter-spacing:0;font-weight:500">· azul = 1st</span></div>
       <div class="chart" id="chart" style="margin-top:12px">${scoreChart(s.scores, s.avg)}</div>
     </div>
   </section>
@@ -322,7 +331,7 @@
     <div class="panel"><div class="label">Style (Ace)</div>
       <div class="bars">${STYLES.map((st) => {
         const n = s.styles[st] || 0;
-        return `<div class="bar"><span>${st}</span><span class="t"><i style="width:${(n / styleMax) * 100}%"></i></span><b class="num">${n}</b></div>`;
+        return `<div class="bar ${stClass(st)}"><span>${st}</span><span class="t"><i style="width:${(n / styleMax) * 100}%"></i></span><b class="num">${n}</b></div>`;
       }).join("")}</div>
     </div>
   </section>
@@ -487,7 +496,7 @@
     <span class="art">${charImg(t.n, true)}</span>
     <span class="info">
       <b class="nm">${esc(t.n)}</b>
-      <span class="tags"><span class="chip ${t.ro === "Debuffer" ? "deb" : "ace"}">${esc(t.ro)}</span>${t.st ? `<span class="chip">${esc(t.st)}</span>` : ""}</span>
+      <span class="tags"><span class="chip ${t.ro === "Debuffer" ? "deb" : "ace"}">${esc(t.ro)}</span>${t.st ? `<span class="chip ${stClass(t.st)}">${esc(t.st)}</span>` : ""}</span>
       <span class="wrbox"><span class="label">WR</span><b class="num">${umaWr(t)}</b><small>${t.w != null ? `${t.w} / ${L.WINS_TOTAL} wins` : "sem wins"}</small></span>
     </span>
     <span class="minis">
@@ -587,11 +596,12 @@
     card
       .querySelector("[name=ro]")
       .addEventListener("change", (e) => change(() => (t.ro = e.target.value)));
-    card
-      .querySelector("[name=st]")
-      .addEventListener("change", (e) =>
-        change(() => (t.st = e.target.value || null), false),
-      );
+    card.querySelector("[name=st]").addEventListener("change", (e) =>
+      change(() => {
+        t.st = e.target.value || null;
+        e.target.className = stClass(t.st);
+      }, false),
+    );
     const wins = card.querySelector("[name=w]");
     wins.addEventListener("input", () => {
       const v = parseInt(wins.value, 10);
@@ -676,7 +686,7 @@
       <div><button type="button" class="rname">${t.n ? esc(t.n) : `<span style="color:var(--muted)">Escolher Uma ${k + 1}</span>`}</button>
         <div class="fields">
           <label class="nolab"><select name="ro" aria-label="Ace ou Debuffer">${ROLES.map((r) => `<option ${t.ro === r ? "selected" : ""}>${r}</option>`).join("")}</select></label>
-          <label class="nolab"><select name="st" aria-label="Style"><option value="">Style —</option>${STYLES.map((s) => `<option ${t.st === s ? "selected" : ""}>${s}</option>`).join("")}</select></label>
+          <label class="nolab"><select name="st" class="${stClass(t.st)}" aria-label="Style"><option value="">Style —</option>${STYLES.map((s) => `<option ${t.st === s ? "selected" : ""}>${s}</option>`).join("")}</select></label>
           <label>Wins<span class="wins"><input name="w" type="number" min="0" max="${L.WINS_TOTAL}" inputmode="numeric" value="${t.w ?? ""}" aria-label="Wins (de ${L.WINS_TOTAL})"><span class="of">/ ${L.WINS_TOTAL}</span></span></label>
           <div class="wrbox"><span class="label">WR</span><b class="num wrp">${umaWr(t)}</b></div>
         </div></div></div>

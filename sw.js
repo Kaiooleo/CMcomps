@@ -20,6 +20,7 @@ const CORE = [
   "app.js",
   "manifest.webmanifest",
   "icons/favicon.svg",
+  "icons/cheval-chibi.webp",
   "icons/icon-192.png",
 ];
 
