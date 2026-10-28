@@ -1708,3 +1708,11 @@ select[name="st"][class*="st-"] {
 .chip[class*="st-"] {
   border-color: color-mix(in srgb, var(--st) 55%, transparent);
 }
+
+/* espaço da carta emprestada vazio: continua com o rosa do jogo */
+.mrow .m.off.borrow {
+  opacity: 1;
+  border: 1.5px dashed var(--pink);
+  background: var(--pink-soft);
+  box-shadow: none;
+}

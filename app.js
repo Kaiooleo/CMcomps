@@ -12,8 +12,11 @@
     window.CM_SCHEDULE || {},
     window.CM_CONFIG || {},
   );
+  // As datas do calendário (GameTora) são o último dia do PvP; a final em si
+  // começa na véspera (às 19h de Brasília) e fica aberta até esse último dia.
+  const FINAL_DAY = CONF.date ? L.addDays(CONF.date, -1) : null;
   const finalLabel = () =>
-    CONF.date ? fmtDate(CONF.date) + (CONF.est ? " (estimated)" : "") : "";
+    FINAL_DAY ? fmtDate(FINAL_DAY) + (CONF.est ? " (estimated)" : "") : "";
 
   const STORAGE_KEY = "cmcomps:data";
   const LEGACY_KEY = "cmcomps:data:v1"; // versão inicial (mapa puro, sem número de formato)
@@ -194,7 +197,7 @@
     if (!cm) return "";
     const d = DATA[cm.id];
     const passed = finalPassed();
-    const days = L.daysToFinal(CONF);
+    const days = L.daysToFinal({ date: FINAL_DAY });
     const when = passed
       ? `Final on ${finalLabel()} · done`
       : days != null
@@ -371,7 +374,7 @@
     const title = c.nm && c.nm !== "League of Heroes" ? c.nm : c.sc;
     let chips = "";
     if (ph === "current")
-      chips += `<span class="chip cur">Current PvP${CONF.date ? " · final " + fmtShort(CONF.date) + (CONF.est ? " (est.)" : "") : ""}</span>`;
+      chips += `<span class="chip cur">Current PvP${CONF.date ? " · final " + fmtShort(FINAL_DAY) + (CONF.est ? " (est.)" : "") : ""}</span>`;
     if (ph === "future") chips += '<span class="chip none">Not counted</span>';
     if (d && d.pl)
       chips += `<span class="chip ${plClass(d.pl)}">${esc(d.pl)}</span>`;
@@ -446,7 +449,7 @@
 
   function currentNote(id) {
     if (phase(id) !== "current") return "";
-    return `<div class="banner sched"><p><b>Current PvP.</b> ${finalPassed() ? "The final is over and it now counts in the stats." : `It counts in the stats after the final${CONF.date ? ` (${finalLabel()})` : ""}${CONF.est ? `, plus ${L.MARGIN_DAYS} days since the date is estimated` : ""}.`}</p></div>`;
+    return `<div class="banner sched"><p><b>Current PvP.</b> ${finalPassed() ? "This PvP is over and it now counts in the stats." : `It counts in the stats once this PvP ends${CONF.date ? ` on ${fmtDate(CONF.date)}` : ""}${CONF.est ? ` (estimated date, plus ${L.MARGIN_DAYS} days of margin)` : ""}.`}</p></div>`;
   }
 
   function pvpHead(cm, sub = "") {

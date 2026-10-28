@@ -1,5 +1,6 @@
 // Dados do site: Current PvP, lista de PvPs, personagens, cartas e posição das imagens nas folhas (sp/).
-// Datas das FINAIS no servidor global (fonte: GameTora).
+// Último dia de cada PvP no servidor global (fonte: GameTora). A final começa na véspera,
+// às 19h de Brasília, e fica aberta até esse dia; o site mostra a final como a véspera.
 // - Sem "est": data oficial. Com "est: true": estimada (antes do anúncio da Cygames).
 // - PvPs sem data aqui são estimados sozinhos: final anterior + 21 dias.
 // - Quando a Cygames anunciar a final, troque a data e apague o "est: true".
