@@ -208,14 +208,45 @@
     const cards = {};
     const borrow = {};
     const scores = [];
+    const byStyle = {}; // estilo → { wins, races } das Aces com Wins preenchido
+    const byDist = {}; // distância (ou Dirt) → { sum, n } do WR dos rounds
+    const byScenario = []; // [{ sc, sum, n }] na ordem dos PvPs
+    const parents = {}; // parents e avós usados (todas as Umas)
+    const winCards = {}; // cartas das Aces nos PvPs em que ficou 1st
     for (const cm of cms) {
       const d = data[cm.id];
       if (!d || !isCounted(cm.id)) continue;
       if (pl[d.pl] !== undefined) pl[d.pl]++;
       const sc = ratingScore(d.rat);
-      if (sc > 0) scores.push({ id: cm.id, sc, pl: d.pl });
+      if (sc > 0) {
+        scores.push({ id: cm.id, sc, pl: d.pl });
+        const dk = cm.su === "Dirt" ? "Dirt" : dist(cm.m) || cm.dc;
+        if (dk) {
+          byDist[dk] = byDist[dk] || { sum: 0, n: 0 };
+          byDist[dk].sum += sc;
+          byDist[dk].n++;
+        }
+        if (cm.sc) {
+          let row = byScenario.find((r) => r.sc === cm.sc);
+          if (!row) byScenario.push((row = { sc: cm.sc, sum: 0, n: 0 }));
+          row.sum += sc;
+          row.n++;
+        }
+      }
+      const total = winsTotal(d.rat);
       for (const t of d.team || []) {
-        if (!t.n || t.ro === "Debuffer") continue;
+        if (!t.n) continue;
+        (t.p || []).forEach((n) => n && (parents[n] = (parents[n] || 0) + 1));
+        if (t.ro === "Debuffer") continue;
+        if (t.st && t.w != null) {
+          const b = (byStyle[t.st] = byStyle[t.st] || { wins: 0, races: 0 });
+          b.wins += t.w;
+          b.races += total;
+        }
+        if (d.pl === "1st")
+          (t.d || []).forEach(
+            (k) => k && (winCards[k] = (winCards[k] || 0) + 1),
+          );
         aces[t.n] = (aces[t.n] || 0) + 1;
         if (t.st) styles[t.st] = (styles[t.st] || 0) + 1;
         (t.d || []).forEach((k, i) => {
@@ -240,6 +271,15 @@
       aces: top(aces, Infinity),
       cards: top(cards, Infinity),
       borrow: top(borrow, Infinity),
+      parents: top(parents, Infinity),
+      winCards: top(winCards, Infinity),
+      byStyle,
+      byDist,
+      byScenario: byScenario.map((r) => ({
+        sc: r.sc,
+        avg: r.sum / r.n,
+        n: r.n,
+      })),
       scores,
       best: sorted[0],
       worst: sorted[sorted.length - 1],

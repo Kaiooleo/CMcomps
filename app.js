@@ -271,7 +271,21 @@
       key: "borrow",
       pink: true,
     },
+    "rank-parents": { title: "Most Used Parents", key: "parents" },
+    "rank-wincards": { title: "Cards in 1st Places", key: "winCards" },
   };
+
+  /** Barras de WR (0–100%): [{ label, v, sub, cls }]; sem dado, a barra fica vazia. */
+  function wrBars(rows) {
+    if (!rows.some((r) => r.v != null))
+      return '<p class="empty">Nothing recorded yet.</p>';
+    return `<div class="bars wrbars">${rows
+      .map(
+        (r) =>
+          `<div class="bar ${r.cls || ""}"><span>${esc(r.label)}</span><span class="t"><i style="width:${(r.v || 0) * 100}%"></i></span><b class="num">${r.v != null ? pct(r.v) : "–"}</b><small>${r.sub || ""}</small></div>`,
+      )
+      .join("")}</div>`;
+  }
 
   function panelHead(id, total) {
     const r = RANKINGS[id];
@@ -297,7 +311,7 @@
     const list = L.computeStats(CAT.cms, DATA, counted)[r.key];
     const body = !list.length
       ? '<p class="empty">Nothing recorded yet.</p>'
-      : r.key === "aces"
+      : r.key === "aces" || r.key === "parents"
         ? aceGrid(list, 1)
         : podium(list, r.key === "borrow", true);
     $("#app").innerHTML = `
@@ -349,8 +363,44 @@
       }).join("")}</div>
     </div>
   </section>
+  <section class="row2">
+    <div class="panel"><div class="label">WR by style (Ace)</div>
+      ${wrBars(
+        STYLES.map((st) => {
+          const b = s.byStyle[st];
+          return {
+            label: st,
+            cls: stClass(st),
+            v: b && b.races ? b.wins / b.races : null,
+            sub: b ? `${b.wins}/${b.races}` : "",
+          };
+        }),
+      )}
+    </div>
+    <div class="panel"><div class="label">WR by distance</div>
+      ${wrBars(
+        ["Sprint", "Mile", "Medium", "Long", "Dirt"].map((k) => {
+          const b = s.byDist[k];
+          return {
+            label: k,
+            v: b ? b.sum / b.n : null,
+            sub: b ? `${b.n} PvP${b.n > 1 ? "s" : ""}` : "",
+          };
+        }),
+      )}
+    </div>
+  </section>
+  <section class="panel"><div class="label">WR by scenario</div>
+    ${wrBars(s.byScenario.map((r) => ({ label: r.sc, v: r.avg, sub: `${r.n} PvP${r.n > 1 ? "s" : ""}` })))}
+  </section>
   <section class="panel">${panelHead("rank-cards", s.cards.length)}${podium(s.cards.slice(0, TOP), false)}</section>
-  <section class="panel">${panelHead("rank-borrowed", s.borrow.length)}${podium(s.borrow.slice(0, TOP), true)}</section>`;
+  <section class="panel">${panelHead("rank-borrowed", s.borrow.length)}${podium(s.borrow.slice(0, TOP), true)}</section>
+  <section class="row2">
+    <div class="panel">${panelHead("rank-parents", s.parents.length)}
+      ${s.parents.length ? aceGrid(s.parents.slice(0, TOP)) : '<p class="empty">Nothing recorded yet.</p>'}
+    </div>
+    <div class="panel">${panelHead("rank-wincards", s.winCards.length)}${podium(s.winCards.slice(0, TOP), false)}</div>
+  </section>`;
 
     const chart = $("#chart");
     const tip = chart && chart.querySelector(".tip");
@@ -478,7 +528,7 @@
       .join("");
     const nav = sub
       ? ""
-      : `<div class="nav2">${prev ? `<a class="btn" href="#cm-${esc(prev.id)}">← ${esc(prev.id)}</a>` : ""}<a class="btn" href="#cms">All PvP</a>${next ? `<a class="btn" href="#cm-${esc(next.id)}">${esc(next.id)} →</a>` : ""}</div>`;
+      : `<div class="nav2"><button class="btn primary" id="share" type="button">Share</button>${prev ? `<a class="btn" href="#cm-${esc(prev.id)}">← ${esc(prev.id)}</a>` : ""}<a class="btn" href="#cms">All PvP</a>${next ? `<a class="btn" href="#cm-${esc(next.id)}">${esc(next.id)} →</a>` : ""}</div>`;
     return `<section class="cmhead">
     <div><div class="label">${esc(cm.sc)}${cm.nm ? " · " + esc(cm.nm) : ""}</div><h1><a class="cmid ${isLoh(cm.id) ? "loh" : ""}" href="#cm-${esc(cm.id)}">${esc(cm.id)}</a>${sub}</h1></div>
     <div class="meta">${meta}</div>
@@ -554,6 +604,7 @@
     </div>
   </section>`;
 
+    $("#share").addEventListener("click", () => openShare(id));
     document.querySelectorAll("[data-pl]").forEach((b) =>
       b.addEventListener("click", () => {
         d.pl = b.dataset.pl;
@@ -842,6 +893,430 @@
   $("#pk-remove").addEventListener("click", () => pick(null));
   $("#picker").addEventListener("click", (e) => {
     if (e.target === $("#picker")) $("#picker").close();
+  });
+
+  /* ---------- compartilhar o time de um PvP como imagem ---------- */
+  // Desenha num <canvas> com as mesmas artes do site (mesma origem, então a
+  // imagem pode ser copiada/baixada). Cores fixas do tema escuro.
+  const SH = {
+    bg: "#08090e",
+    panel: "#11131b",
+    panel2: "#161d26",
+    line: "#23303d",
+    fg: "#e9ebf5",
+    muted: "#93a7b8",
+    faint: "#686e8f",
+    accent: "#8fd8ec",
+    pink: "#f070ab",
+    loh: "#f0625e",
+    place: {
+      "1st": "#e2b843",
+      "2nd": "#aab4bf",
+      "3rd": "#d58a5c",
+      "B 1st": "#8fd8ec",
+    },
+    style: {
+      Runaway: "#96dcf8",
+      "Front Runner": "#00b0f0",
+      "Pace Chaser": "#00b050",
+      "Late Surger": "#e9712f",
+      "End Closer": "#ff4a4a",
+    },
+    font: (w, px) =>
+      `${w} ${px}px Figtree, system-ui, -apple-system, "Segoe UI", sans-serif`,
+  };
+  const imgCache = new Map();
+  const loadImg = (url) => {
+    if (!imgCache.has(url))
+      imgCache.set(
+        url,
+        new Promise((res) => {
+          const im = new Image();
+          im.onload = () => res(im);
+          im.onerror = () => res(null);
+          im.src = url;
+        }),
+      );
+    return imgCache.get(url);
+  };
+  function rrect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, r);
+  }
+  /** Desenha um arquivo do ATLAS (imagem solta ou pedaço de folha) cobrindo a caixa. */
+  async function drawArt(ctx, file, x, y, w, h, r = 0, alignBottom = false) {
+    const e = file && ATLAS[file];
+    if (!e) return false;
+    const im = await loadImg(typeof e === "string" ? e : e[0]);
+    if (!im) return false;
+    let sx = 0;
+    let sy = 0;
+    let sw = im.naturalWidth;
+    let sh = im.naturalHeight;
+    if (typeof e !== "string") {
+      const [, c, rr, C, R] = e;
+      sw /= C;
+      sh /= R;
+      sx = c * sw;
+      sy = rr * sh;
+    }
+    const k = Math.max(w / sw, h / sh); // "cover"
+    const cw = w / k;
+    const ch = h / k;
+    const ox = sx + (sw - cw) / 2;
+    const oy = alignBottom ? sy + sh - ch : sy + (sh - ch) / 2;
+    ctx.save();
+    rrect(ctx, x, y, w, h, r);
+    ctx.clip();
+    ctx.drawImage(im, ox, oy, cw, ch, x, y, w, h);
+    ctx.restore();
+    return true;
+  }
+  /** Texto numa largura máxima: diminui a fonte até caber, e corta com "…" se precisar. */
+  function fitText(ctx, text, x, y, maxW, px, weight = 600, min = 12) {
+    let size = px;
+    ctx.font = SH.font(weight, size);
+    while (size > min && ctx.measureText(text).width > maxW) {
+      size--;
+      ctx.font = SH.font(weight, size);
+    }
+    let t = text;
+    while (t.length > 1 && ctx.measureText(t).width > maxW)
+      t = t.slice(0, -2) + "…";
+    ctx.fillText(t, x, y);
+  }
+  function chip(ctx, text, x, y, color, filled = false, px = 15) {
+    ctx.font = SH.font(700, px);
+    const w = ctx.measureText(text).width + 20;
+    const h = px + 12;
+    rrect(ctx, x, y, w, h, h / 2);
+    if (filled) {
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.fillStyle = "#0b0f14";
+    } else {
+      ctx.fillStyle = SH.panel2;
+      ctx.fill();
+      ctx.fillStyle = color;
+    }
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, x + 10, y + h / 2 + 1);
+    ctx.textBaseline = "alphabetic";
+    return w;
+  }
+  /** Espaço com arte; vazio fica tracejado (azul-claro, ou rosa na emprestada). */
+  async function slot(ctx, file, x, y, w, h, r, kind = "") {
+    const ok = await drawArt(ctx, file, x, y, w, h, r);
+    const color = kind === "borrow" ? "240,112,171" : "143,216,236";
+    ctx.save();
+    rrect(ctx, x, y, w, h, r);
+    if (!ok) {
+      ctx.fillStyle = kind ? `rgba(${color},0.08)` : SH.panel2;
+      ctx.fill();
+      ctx.setLineDash([5, 4]);
+      ctx.strokeStyle = kind ? `rgba(${color},0.8)` : SH.line;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    } else if (kind === "borrow") {
+      ctx.strokeStyle = `rgb(${color})`;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  async function renderShare(id) {
+    const cm = CM_BY_ID.get(id);
+    const d = record(id);
+    const W = 1600;
+    const H = 840;
+    const cv = document.createElement("canvas");
+    cv.width = W;
+    cv.height = H;
+    const ctx = cv.getContext("2d");
+    try {
+      await document.fonts.ready;
+    } catch (_) {
+      /* sem fontes da web: usa as do sistema */
+    }
+    ctx.fillStyle = SH.bg;
+    ctx.fillRect(0, 0, W, H);
+    const g = ctx.createRadialGradient(260, 120, 0, 260, 120, 700);
+    g.addColorStop(0, "rgba(143,216,236,0.10)");
+    g.addColorStop(1, "rgba(143,216,236,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    // cabeçalho
+    const P = 56;
+    ctx.fillStyle = SH.muted;
+    ctx.font = SH.font(700, 18);
+    const top = [cm.sc, cm.nm].filter(Boolean).join(" · ").toUpperCase();
+    ctx.fillText(top, P, 74);
+    ctx.fillStyle = isLoh(cm.id) ? SH.loh : SH.fg;
+    ctx.font = SH.font(800, 64);
+    ctx.fillText(cm.id, P, 140);
+    const idW = ctx.measureText(cm.id).width;
+    const name = getName();
+    if (name) {
+      ctx.fillStyle = SH.muted;
+      ctx.font = SH.font(600, 26);
+      ctx.fillText(`· ${name}`, P + idW + 16, 138);
+    }
+    ctx.fillStyle = SH.muted;
+    ctx.font = SH.font(500, 22);
+    const course = [
+      cm.tr,
+      cm.m ? cm.m + "m" : "",
+      cm.su,
+      distOf(cm),
+      cm.dir,
+      cm.se,
+      cm.we,
+      cm.gr,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    ctx.fillText(course, P, 180);
+
+    // resultado (direita)
+    const score = L.ratingScore(d.rat);
+    const tot = L.roundTotals(d.rat);
+    let rx = W - P;
+    ctx.textAlign = "right";
+    if (score) {
+      ctx.fillStyle = SH.fg;
+      ctx.font = SH.font(800, 58);
+      ctx.fillText(pct(score), rx, 134);
+      ctx.fillStyle = SH.muted;
+      ctx.font = SH.font(600, 20);
+      ctx.fillText(`WR · ${tot.wins} / ${tot.races} wins`, rx, 166);
+    }
+    ctx.textAlign = "left";
+    if (d.pl) {
+      ctx.font = SH.font(800, 26);
+      const w = ctx.measureText(d.pl).width + 36;
+      const x = score ? rx - 250 - w : rx - w;
+      rrect(ctx, x, 92, w, 48, 24);
+      ctx.fillStyle = SH.place[d.pl] || SH.accent;
+      ctx.fill();
+      ctx.fillStyle = "#0b0f14";
+      ctx.textBaseline = "middle";
+      ctx.fillText(d.pl, x + 18, 117);
+      ctx.textBaseline = "alphabetic";
+    }
+
+    // as 3 Umas
+    const gap = 24;
+    const cw = (W - 2 * P - 2 * gap) / 3;
+    const cy = 216;
+    const chh = 530;
+    for (let k = 0; k < 3; k++) {
+      const t = d.team[k];
+      const x = P + k * (cw + gap);
+      rrect(ctx, x, cy, cw, chh, 22);
+      ctx.fillStyle = SH.panel;
+      ctx.fill();
+      ctx.strokeStyle = t.ro === "Debuffer" ? SH.loh + "aa" : SH.line;
+      ctx.lineWidth = t.ro === "Debuffer" ? 2 : 1;
+      ctx.stroke();
+      const ix = x + 22;
+      if (!t.n) {
+        ctx.fillStyle = SH.faint;
+        ctx.font = SH.font(600, 22);
+        ctx.fillText(`Uma ${k + 1} — empty`, ix, cy + 50);
+        continue;
+      }
+      const c = CHAR.get(t.n);
+      // arte + nome
+      rrect(ctx, ix, cy + 22, 150, 150, 16);
+      ctx.fillStyle = SH.panel2;
+      ctx.fill();
+      await drawArt(ctx, c && (c.s || c.i), ix, cy + 22, 150, 150, 16, true);
+      const tx = ix + 168;
+      const tw = cw - 44 - 168;
+      ctx.fillStyle = SH.fg;
+      fitText(ctx, t.n, tx, cy + 56, tw, 25, 700, 15);
+      let chx = tx;
+      chx +=
+        chip(
+          ctx,
+          t.ro,
+          chx,
+          cy + 72,
+          t.ro === "Debuffer" ? SH.loh : SH.accent,
+        ) + 8;
+      if (t.st) chip(ctx, t.st, chx, cy + 72, SH.style[t.st] || SH.muted);
+      const total = L.winsTotal(d.rat);
+      ctx.fillStyle = SH.muted;
+      ctx.font = SH.font(700, 15);
+      ctx.fillText("WR", tx, cy + 146);
+      ctx.fillStyle = SH.fg;
+      ctx.font = SH.font(800, 34);
+      ctx.fillText(t.w != null ? pct(t.w / total) : "–", tx + 32, cy + 150);
+      if (t.w != null) {
+        ctx.fillStyle = SH.muted;
+        ctx.font = SH.font(500, 15);
+        ctx.fillText(`${t.w} / ${total}`, tx + 34, cy + 172);
+      }
+
+      // parents: P grande com os dois avós ao lado
+      let py = cy + 200;
+      ctx.fillStyle = SH.muted;
+      ctx.font = SH.font(700, 14);
+      ctx.fillText("PARENTS", ix, py);
+      py += 14;
+      const half = (cw - 44) / 2;
+      for (const [side, base] of [
+        [0, 0],
+        [1, 3],
+      ]) {
+        const px = ix + side * half;
+        const pName = t.p[base];
+        await slot(
+          ctx,
+          pName && CHAR.get(pName) && CHAR.get(pName).i,
+          px,
+          py,
+          72,
+          72,
+          36,
+        );
+        for (const g2 of [1, 2]) {
+          const gName = t.p[base + g2];
+          await slot(
+            ctx,
+            gName && CHAR.get(gName) && CHAR.get(gName).i,
+            px + 80 + (g2 - 1) * 54,
+            py + 24,
+            48,
+            48,
+            24,
+          );
+        }
+      }
+      // affinity
+      const aff = L.affinity(
+        charaIdOf(t.n),
+        t.p.map(charaIdOf),
+        window.CM_AFFINITY,
+      );
+      const anyAff = aff.parts.some((p) => p.value !== null);
+      py += 92;
+      rrect(ctx, ix, py, cw - 44, 54, 14);
+      ctx.fillStyle = SH.panel2;
+      ctx.fill();
+      ctx.fillStyle = SH.muted;
+      ctx.font = SH.font(700, 14);
+      ctx.fillText("AFFINITY", ix + 16, py + 33);
+      ctx.textAlign = "right";
+      ctx.fillStyle = SH.fg;
+      ctx.font = SH.font(800, 30);
+      ctx.fillText(
+        anyAff ? `${aff.total} ${aff.mark}` : "–",
+        ix + cw - 44 - 16,
+        py + 38,
+      );
+      ctx.textAlign = "left";
+
+      // deck 3×2 com o limit break
+      py += 78;
+      ctx.fillStyle = SH.muted;
+      ctx.font = SH.font(700, 14);
+      ctx.fillText("DECK", ix, py);
+      py += 12;
+      const dw = (cw - 44 - 5 * 10) / 6;
+      const dh = dw * (4 / 3);
+      for (let j = 0; j < 6; j++) {
+        const key = t.d[j];
+        const card = key && CARD.get(key);
+        const dx = ix + j * (dw + 10);
+        const borrowed = j === L.BORROWED_SLOT;
+        await slot(
+          ctx,
+          card && card.im,
+          dx,
+          py,
+          dw,
+          dh,
+          8,
+          borrowed ? "borrow" : "card",
+        );
+        if (key) {
+          ctx.fillStyle = SH.muted;
+          ctx.font = SH.font(700, 13);
+          ctx.textAlign = "center";
+          ctx.fillText(L.LB_LABELS[t.lb[j] ?? 4], dx + dw / 2, py + dh + 18);
+          ctx.textAlign = "left";
+        }
+      }
+    }
+
+    // rounds e rodapé
+    const fy = cy + chh + 46;
+    ctx.font = SH.font(600, 18);
+    let fx = P;
+    const labels = ["R1 D1", "R1 D2", "R2 D1", "R2 D2"];
+    d.rat.forEach((r, k) => {
+      const p = L.parseRound(r);
+      if (!p) return;
+      const txt = `${labels[k]}  ${r}  (${pct(p.wins / p.races)})`;
+      ctx.fillStyle = SH.panel2;
+      const w = ctx.measureText(txt).width + 24;
+      rrect(ctx, fx, fy - 24, w, 36, 18);
+      ctx.fill();
+      ctx.fillStyle = SH.fg;
+      ctx.fillText(txt, fx + 12, fy);
+      fx += w + 10;
+    });
+    ctx.textAlign = "right";
+    ctx.fillStyle = SH.faint;
+    ctx.font = SH.font(600, 18);
+    ctx.fillText("kaiooleo.github.io/CMcomps", W - P - 52, fy);
+    ctx.textAlign = "left";
+    const chibi = await loadImg("icons/cheval-chibi.webp");
+    if (chibi) ctx.drawImage(chibi, W - P - 46, fy - 34, 44, 44);
+    return cv;
+  }
+
+  async function openShare(id) {
+    const dlg = $("#share-dlg");
+    const img = $("#share-img");
+    img.removeAttribute("src");
+    $("#share-msg").textContent = "Making the image…";
+    dlg.showModal();
+    const cv = await renderShare(id);
+    const blob = await new Promise((r) => cv.toBlob(r, "image/png"));
+    img.src = URL.createObjectURL(blob);
+    $("#share-msg").textContent = "";
+    const file = `comps-${id}${getName() ? "-" + getName().replace(/[^\p{L}\p{N}_-]+/gu, "-") : ""}.png`;
+    const copy = $("#share-copy");
+    copy.hidden = !(navigator.clipboard && window.ClipboardItem);
+    copy.onclick = async () => {
+      try {
+        await navigator.clipboard.write([
+          new ClipboardItem({ "image/png": blob }),
+        ]);
+        $("#share-msg").textContent = "Copied! Paste it on Discord (Ctrl+V).";
+      } catch (_) {
+        $("#share-msg").textContent =
+          "This browser didn't allow copying. Use Download.";
+      }
+    };
+    $("#share-down").onclick = () => {
+      const a = document.createElement("a");
+      a.href = img.src;
+      a.download = file;
+      a.click();
+    };
+    const f = new File([blob], file, { type: "image/png" });
+    const native = $("#share-native");
+    native.hidden = !(navigator.canShare && navigator.canShare({ files: [f] }));
+    native.onclick = () => navigator.share({ files: [f] }).catch(() => {});
+  }
+  $("#share-close").addEventListener("click", () => $("#share-dlg").close());
+  $("#share-dlg").addEventListener("click", (e) => {
+    if (e.target === $("#share-dlg")) $("#share-dlg").close();
   });
 
   /* ---------- backup ---------- */

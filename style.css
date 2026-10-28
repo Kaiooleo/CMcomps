@@ -1783,3 +1783,56 @@ select[name="st"][class*="st-"] {
     margin-left: auto;
   }
 }
+
+/* barras de WR (por estilo, distância e cenário) */
+.wrbars .bar {
+  grid-template-columns: minmax(96px, 150px) 1fr 52px 64px;
+}
+.wrbars .bar small {
+  color: var(--faint);
+  font-size: 12px;
+  text-align: right;
+}
+.wrbars .bar b {
+  text-align: right;
+}
+@media (max-width: 560px) {
+  .wrbars .bar {
+    grid-template-columns: 96px 1fr 48px;
+  }
+  .wrbars .bar small {
+    display: none;
+  }
+}
+
+/* janela de compartilhar */
+#share-dlg[open] {
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(1100px, calc(100vw - 24px));
+}
+#share-dlg .dhead h2 {
+  margin-right: auto;
+}
+.share-msg {
+  color: var(--muted);
+  font-size: 14px;
+}
+.share-body {
+  overflow-y: auto;
+  padding: 4px 16px 16px;
+  display: grid;
+  gap: 12px;
+}
+.share-body img {
+  width: 100%;
+  aspect-ratio: 1600 / 840;
+  border-radius: 12px;
+  background: var(--surface-2);
+  object-fit: contain;
+}
+.share-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}

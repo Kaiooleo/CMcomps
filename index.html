@@ -130,6 +130,28 @@
       <div class="pick" id="pk-list"></div>
     </dialog>
 
+    <dialog id="share-dlg" aria-labelledby="share-title">
+      <div class="dhead">
+        <h2 id="share-title">Share team</h2>
+        <span class="share-msg" id="share-msg" aria-live="polite"></span>
+        <button class="btn" id="share-close" type="button" aria-label="Close">
+          ✕
+        </button>
+      </div>
+      <div class="share-body">
+        <img id="share-img" alt="Image of this PvP team" />
+        <div class="share-actions">
+          <button class="btn primary" id="share-copy" type="button">
+            Copy image
+          </button>
+          <button class="btn" id="share-down" type="button">Download</button>
+          <button class="btn" id="share-native" type="button" hidden>
+            Share…
+          </button>
+        </div>
+      </div>
+    </dialog>
+
     <script src="data.js"></script>
     <script src="affinity.js"></script>
     <script src="logic.js"></script>

@@ -381,3 +381,83 @@ test("Wins da Uma: total = corridas dos rounds preenchidos, ou 80", () => {
   assert.equal(L.winsTotal(undefined), 80);
   assert.equal(L.winsTotal(["5-4-3", "12/15", "17", "x"]), 50);
 });
+
+test("estatísticas novas: WR por estilo, distância e cenário; parents; cartas dos 1st", () => {
+  const cms = [
+    { id: "A", sc: "URA Finale", su: "Turf", m: 1200 },
+    { id: "B", sc: "URA Finale", su: "Dirt", m: 1600 },
+    { id: "C", sc: "Unity Cup", su: "Turf", m: 2500 },
+  ];
+  const u = (n, ro, st, w, p, d) => ({
+    n,
+    ro,
+    st,
+    w,
+    p: p || Array(6).fill(null),
+    d: d || Array(6).fill(null),
+    lb: Array(6).fill(null),
+  });
+  const data = {
+    A: rec({
+      pl: "1st",
+      rat: ["17", "", "", ""], // 20 corridas
+      team: [
+        u(
+          "Oguri Cap",
+          "Ace",
+          "Pace Chaser",
+          15,
+          ["Gold Ship", null, null, null, null, null],
+          ["X", "Y", null, null, null, "Z"],
+        ),
+        u(
+          "Nice Nature",
+          "Debuffer",
+          "Late Surger",
+          2,
+          ["Gold Ship", null, null, null, null, null],
+          ["W"],
+        ),
+        u(null, "Ace", null, null),
+      ],
+    }),
+    B: rec({
+      pl: "2nd",
+      rat: ["10/20", "", "", ""],
+      team: [
+        u("Oguri Cap", "Ace", "Pace Chaser", 10, null, ["X"]),
+        u(null, "Ace", null, null),
+        u(null, "Ace", null, null),
+      ],
+    }),
+    C: rec({
+      pl: "3rd",
+      rat: ["5-5-5-5"],
+      team: [
+        u(null, "Ace", null, null),
+        u(null, "Ace", null, null),
+        u(null, "Ace", null, null),
+      ],
+    }),
+  };
+  const s = L.computeStats(cms, data);
+  assert.deepEqual(s.byStyle["Pace Chaser"], { wins: 25, races: 40 });
+  assert.equal(s.byStyle["Late Surger"], undefined, "Debuffer fica de fora");
+  assert.deepEqual(s.byDist.Sprint, { sum: 0.85, n: 1 });
+  assert.deepEqual(s.byDist.Dirt, { sum: 0.5, n: 1 });
+  assert.deepEqual(s.byDist.Long, { sum: 1, n: 1 });
+  assert.deepEqual(
+    s.byScenario.map((r) => [r.sc, r.n]),
+    [
+      ["URA Finale", 2],
+      ["Unity Cup", 1],
+    ],
+  );
+  assert.equal(s.byScenario[0].avg, (0.85 + 0.5) / 2);
+  assert.deepEqual(s.parents, [["Gold Ship", 2]]);
+  assert.deepEqual(s.winCards, [
+    ["X", 1],
+    ["Y", 1],
+    ["Z", 1],
+  ]);
+});

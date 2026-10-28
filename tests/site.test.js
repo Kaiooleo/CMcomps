@@ -275,3 +275,18 @@ test("seta de voltar sobe um nível: PvP → lista, mesmo depois de ir para o pr
   assert.deepEqual(errors, []);
   await context.close();
 });
+
+test("Share gera a imagem do time do PvP", async () => {
+  const { context, page, errors } = await openPage();
+  await page.goto(base + "#cm-CM3");
+  await page.click("#share");
+  await page.waitForFunction(() => document.querySelector("#share-img").src);
+  const size = await page.evaluate(async () => {
+    const im = document.querySelector("#share-img");
+    await im.decode();
+    return [im.naturalWidth, im.naturalHeight];
+  });
+  assert.deepEqual(size, [1600, 840]);
+  assert.deepEqual(errors, []);
+  await context.close();
+});
