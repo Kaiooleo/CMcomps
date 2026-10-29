@@ -1884,3 +1884,11 @@ select[name="st"][class*="st-"] {
     height: 20px;
   }
 }
+
+/* créditos no fim do rodapé */
+.foot .credits {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 12px;
+  color: var(--faint);
+}
