@@ -370,7 +370,8 @@
     const d = DATA[c.id];
     const team = d ? d.team.filter((t) => t.n) : [];
     const ph = phase(c.id);
-    const title = c.nm && c.nm !== "League of Heroes" ? c.nm : c.sc;
+    // LoH não tem nome próprio: o bloco mostra só o número (ex.: LOH3)
+    const title = isLoh(c.id) ? "" : c.nm || c.sc;
     let chips = "";
     if (ph === "current")
       chips += `<span class="chip cur">Current PvP${CONF.date ? " · final " + fmtShort(FINAL_DAY) + (CONF.est ? " (est.)" : "") : ""}</span>`;
@@ -380,7 +381,7 @@
     else if (ph !== "future")
       chips += `<span class="chip none">${team.length ? "No result" : "Empty"}</span>`;
     return `<a class="tile ${ph === "future" ? "future" : ""} ${ph === "current" ? "current" : ""}" href="#cm-${esc(c.id)}">
-      <div class="top"><h2><span class="cmid ${isLoh(c.id) ? "loh" : ""}">${esc(c.id)}</span> <span class="sc">· ${esc(title)}</span></h2>${chips}</div>
+      <div class="top"><h2><span class="cmid ${isLoh(c.id) ? "loh" : ""}">${esc(c.id)}</span>${title ? ` <span class="sc">· ${esc(title)}</span>` : ""}</h2>${chips}</div>
       <div class="ln num">${courseLine(c)}</div>
       <div class="cond"><b>${esc(c.sc)}</b>${cond(c) ? " · " + cond(c) : ""}</div>
       <div class="faces">${team.map((t) => `<span class="face ${t.ro === "Debuffer" ? "debuff" : ""}" title="${esc(t.n)} · ${esc(t.ro)}">${charImg(t.n, true)}</span>`).join("")}</div>
@@ -1453,10 +1454,17 @@
   $("#back").addEventListener("click", () => {
     location.hash = parentRoute(location.hash);
   });
+  // Volta para o mesmo ponto da página: guarda a rolagem de cada tela ao sair
+  // e a recupera ao voltar (telas novas abrem no topo).
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+  const scrollMem = new Map();
+  let curHash = location.hash;
   window.addEventListener("hashchange", () => {
     if ($("#picker").open) $("#picker").close();
-    window.scrollTo(0, 0);
+    scrollMem.set(curHash, window.scrollY);
+    curHash = location.hash;
     route();
+    window.scrollTo(0, scrollMem.get(curHash) || 0);
   });
 
   /* ---------- início ---------- */

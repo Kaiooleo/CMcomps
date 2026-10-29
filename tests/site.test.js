@@ -290,3 +290,31 @@ test("Share gera a imagem do time do PvP", async () => {
   assert.deepEqual(errors, []);
   await context.close();
 });
+
+test("voltar para a lista de PvP mantém a posição da rolagem", async () => {
+  const { context, page, errors } = await openPage();
+  await page.goto(base + "#cms");
+  await page.waitForSelector(".tile");
+  await page.locator('.tile[href="#cm-CM30"]').scrollIntoViewIfNeeded();
+  const before = await page.evaluate(() => window.scrollY);
+  assert.ok(before > 500);
+  await page.click('.tile[href="#cm-CM30"]');
+  await page.waitForFunction(() => location.hash === "#cm-CM30");
+  await page.waitForSelector(".umacard");
+  assert.equal(
+    await page.evaluate(() => window.scrollY),
+    0,
+    "PvP abre no topo",
+  );
+  await page.click("#back");
+  await page.waitForFunction(() => location.hash === "#cms");
+  await page.waitForSelector(".tile");
+  assert.equal(await page.evaluate(() => window.scrollY), before);
+  // LoH sem nome no bloco
+  assert.equal(
+    (await page.textContent('.tile[href="#cm-LOH3"] h2')).trim(),
+    "LOH3",
+  );
+  assert.deepEqual(errors, []);
+  await context.close();
+});
