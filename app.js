@@ -764,13 +764,13 @@
         ? ["SSR", "SR"]
             .map(
               (r) =>
-                `<button type="button" class="tog" data-rar="${r}" aria-pressed="${pickerState.rarity.has(r)}">${r}</button>`,
+                `<button type="button" class="tog ico rar" data-rar="${r}" aria-pressed="${pickerState.rarity.has(r)}" title="${r}" aria-label="${r}"><img src="icons/ui/${r.toLowerCase()}.webp" alt=""></button>`,
             )
             .join("") +
           '<span style="width:8px"></span>' +
           TYPES.map(
             (t) =>
-              `<button type="button" class="tog" data-ty="${t}" aria-pressed="${pickerState.type.has(t)}"><span class="ty" style="background:${typeVar(t)}"></span>${t}</button>`,
+              `<button type="button" class="tog ico" data-ty="${t}" aria-pressed="${pickerState.type.has(t)}" title="${t}" aria-label="${t}"><img src="icons/ui/${t.toLowerCase()}.webp" alt=""></button>`,
           ).join("")
         : "";
     fil.querySelectorAll(".tog").forEach((b) =>

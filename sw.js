@@ -9,7 +9,7 @@
  *
  * Suba CACHE quando quiser forçar todos a baixarem tudo de novo.
  */
-const CACHE = "cmcomps-v24";
+const CACHE = "cmcomps-v25";
 const CORE = [
   "./",
   "index.html",
@@ -21,6 +21,15 @@ const CORE = [
   "manifest.webmanifest",
   "icons/favicon.png",
   "icons/cheval-chibi.webp",
+  "icons/ui/speed.webp",
+  "icons/ui/stamina.webp",
+  "icons/ui/power.webp",
+  "icons/ui/guts.webp",
+  "icons/ui/wit.webp",
+  "icons/ui/pal.webp",
+  "icons/ui/group.webp",
+  "icons/ui/ssr.webp",
+  "icons/ui/sr.webp",
   "icons/icon-192.png",
 ];
 

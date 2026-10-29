@@ -1846,3 +1846,41 @@ select[name="st"][class*="st-"] {
     grid-template-columns: 1fr;
   }
 }
+
+/* filtros de carta com os ícones do jogo (tipo e raridade) */
+.dfil .tog.ico {
+  padding: 3px;
+  border-radius: 12px;
+  line-height: 0;
+  background: transparent;
+  border: 2px solid transparent;
+}
+.dfil .tog.ico img {
+  height: 34px;
+  width: auto;
+  opacity: 0.45;
+  filter: saturate(0.4);
+  transition:
+    opacity 0.15s,
+    filter 0.15s;
+}
+.dfil .tog.ico.rar img {
+  height: 26px;
+}
+.dfil .tog.ico:hover img,
+.dfil .tog.ico[aria-pressed="true"] img {
+  opacity: 1;
+  filter: none;
+}
+.dfil .tog.ico[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+@media (max-width: 560px) {
+  .dfil .tog.ico img {
+    height: 26px;
+  }
+  .dfil .tog.ico.rar img {
+    height: 20px;
+  }
+}
