@@ -811,7 +811,7 @@
             )
             .map(
               (c) =>
-                `<button type="button" data-v="${esc(c.k)}"><span class="im">${cardImg(c.k)}</span><span><b>${esc(c.n)}</b><br><small>${esc(c.t)}</small><br><small><span class="ty" style="background:${typeVar(c.ty)}"></span>${esc(c.ty)} · ${esc(c.r)}</small></span></button>`,
+                `<button type="button" data-v="${esc(c.k)}"><span class="im">${cardImg(c.k)}</span><span><b>${esc(c.n)}</b><br><small>${esc(c.t)}</small></span></button>`,
             );
     list.innerHTML = items.length
       ? items.join("")
