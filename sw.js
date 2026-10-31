@@ -17,6 +17,7 @@ const CORE = [
   "data.js",
   "affinity.js",
   "recs.js",
+  "meta.js",
   "logic.js",
   "app.js",
   "manifest.webmanifest",
