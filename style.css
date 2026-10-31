@@ -1892,3 +1892,104 @@ select[name="st"][class*="st-"] {
   font-size: 12px;
   color: var(--faint);
 }
+
+/* cartas recomendadas do PvP */
+.recs .rec + .rec {
+  margin-top: 16px;
+}
+.recs .rhead {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  margin: 10px 0 10px;
+}
+.recs .rhead span {
+  color: var(--muted);
+  font-size: 13px;
+}
+.rslots {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, auto));
+  justify-content: start;
+  gap: 12px;
+  align-items: start;
+}
+.rslot {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  padding: 8px;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+.rtype img {
+  width: 28px;
+  height: 28px;
+}
+.ralts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 4px 6px;
+}
+.rcard {
+  display: grid;
+  gap: 3px;
+  width: 78px;
+  text-align: center;
+}
+.rcard .spr,
+.rcard .ph {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  height: auto;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.rcard small {
+  font-size: 12px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.ror {
+  align-self: center;
+  font-style: normal;
+  font-size: 11px;
+  color: var(--faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.rnote {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.pick .im .recb {
+  position: absolute;
+  left: 3px;
+  bottom: 3px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 11px;
+}
+.pick button.rec {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+@media (max-width: 760px) {
+  .rslots {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (min-width: 761px) {
+  /* "or" na altura das cartas, não dos nomes */
+  .ror {
+    margin-top: -18px;
+  }
+}

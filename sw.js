@@ -16,6 +16,7 @@ const CORE = [
   "style.css",
   "data.js",
   "affinity.js",
+  "recs.js",
   "logic.js",
   "app.js",
   "manifest.webmanifest",
