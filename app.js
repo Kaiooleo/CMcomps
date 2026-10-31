@@ -47,6 +47,8 @@
   const CARD = new Map(CAT.cards.map((c) => [c.k, c]));
   const CARD_BY_ID = new Map(CAT.cards.map((c) => [String(c.id), c]));
   const RECS = window.CM_RECS || {};
+  const META = window.CM_META || {};
+  const META_CARD_MIN = 20; // % de uso no estilo para a carta virar "Rec" no seletor
   const CM_BY_ID = new Map(CAT.cms.map((c, i) => [c.id, { ...c, i }]));
 
   /* ---------- utilidades ---------- */
@@ -556,12 +558,93 @@
    * Números das cartas recomendadas num PvP para o estilo da Uma
    * (para aparecerem primeiro no seletor). Uma sem estilo vê todas.
    */
-  const recCardIds = (id, style) =>
-    new Set(
-      (RECS[id] || [])
-        .filter((r) => !style || !r.style || r.style === style)
-        .flatMap((r) => r.slots.flatMap((sl) => sl.cards.map(String))),
-    );
+  const recCardIds = (id, style) => {
+    const ids = (RECS[id] || [])
+      .filter((r) => !style || !r.style || r.style === style)
+      .flatMap((r) => r.slots.flatMap((sl) => sl.cards.map(String)));
+    // + as cartas mais usadas nesse estilo no top do JP (meta.js)
+    const decks = (META[id] && META[id].decks) || {};
+    for (const [st, d] of Object.entries(decks))
+      if (!style || st === style)
+        ids.push(
+          ...d.cards.filter((c) => c.use >= META_CARD_MIN).map((c) => c.id),
+        );
+    return new Set(ids);
+  };
+
+  /** Painel "JP meta": o que o top do ranking do JP usou neste LoH (meta.js). */
+  function metaHtml(id) {
+    const m = META[id];
+    if (!m) return "";
+    const p = (x) => `${Math.round(x)}%`;
+    const stName = (st) => `<span class="${stClass(st)}">${esc(st)}</span>`;
+    const base = (n) => n.replace(/\s*\(.*\)$/, "");
+    const umaArt = (u) =>
+      charImg(u.site ? u.n : CHAR.has(base(u.n)) ? base(u.n) : u.n, true);
+    const date = m.date.split("-").reverse().join("/");
+    const styles = m.styles
+      .map(
+        (s) =>
+          `<div class="bar ${stClass(s.st)}"><span>${esc(s.st)}</span><span class="t"><i style="width:${s.use}%"></i></span><b class="num">${p(s.use)}</b><small>1st ${p(s.win)}</small></div>`,
+      )
+      .join("");
+    const combos = m.combos
+      .map(
+        (c) =>
+          `<li><span>${c.st.map(stName).join(" · ")}</span><b class="num">${p(c.use)}</b></li>`,
+      )
+      .join("");
+    const umas = m.umas
+      .map(
+        (u) =>
+          `<div class="mu ${u.site ? "" : "jp"}" title="${esc(u.n)}${u.site ? "" : " — not on the site yet (JP only)"}"><span class="av">${umaArt(u)}${u.site ? "" : '<i class="jpb">JP</i>'}</span><b>${esc(u.n)}</b><small>${stName(u.st)}</small><small class="num">${p(u.use)} · 1st ${p(u.win)}</small></div>`,
+      )
+      .join("");
+    const typeIcon = (t) =>
+      `<img src="icons/ui/${esc(t.toLowerCase())}.webp" alt="${esc(t)}" title="${esc(t)}">`;
+    const decks = Object.entries(m.decks)
+      .map(([st, d]) => {
+        const structs = d.structs
+          .map(
+            (x) =>
+              `<li><span class="ico">${x.t.map(([t, k]) => Array(k).fill(typeIcon(t)).join("")).join("")}</span><b class="num">${p(x.use)}</b></li>`,
+          )
+          .join("");
+        const cards = d.cards
+          .map((c) => {
+            const card = CARD_BY_ID.get(String(c.id));
+            return card
+              ? `<span class="rcard" title="${esc(card.n + " – " + card.t)}">${cardImg(card.k)}<small class="num">${p(c.use)}</small></span>`
+              : "";
+          })
+          .join("");
+        const s = d.stats;
+        return `<div class="md"><div class="rhead"><b class="${stClass(st)}">${esc(st)}</b><span>${d.n} Umas · avg ${s.spd} / ${s.sta} / ${s.pow} / ${s.gut} / ${s.wiz}</span></div>
+        <ul class="mstructs">${structs}</ul>
+        <div class="mcards">${cards}</div></div>`;
+      })
+      .join("");
+    const skills = m.skills
+      .map(
+        (k) =>
+          `<li><span>${esc(k.n)}</span><b class="num">${p(k.use)}</b></li>`,
+      )
+      .join("");
+    return `<section class="panel jpmeta">
+    <div class="phead"><div class="label">JP meta · top ${m.teams} teams</div><small class="msrc">LoH JP ${esc(date)} · data: <a href="https://wiki.biligame.com/umamusume/LOH-${esc(m.date.replace(/-/g, "."))}" target="_blank" rel="noopener">BWIKI</a></small></div>
+    <div class="mgrid">
+      <div><div class="sublabel">Styles · 1st rate</div><div class="bars wrbars">${styles}</div></div>
+      <div><div class="sublabel">Team comps</div><ul class="mlist">${combos}</ul></div>
+    </div>
+    <div class="sublabel">Most used Umas</div>
+    <div class="mumas">${umas}</div>
+    <div class="sublabel">Decks by style · stats avg Spd / Sta / Pow / Guts / Wit</div>
+    <div class="mdecks">${decks}</div>
+    <div class="sublabel">Most common skills</div>
+    <ul class="mlist mskills">${skills}</ul>
+    <p class="mnote">Data from the JP server, years before the global. Some Umas and cards may not be out on global yet (marked JP).</p>
+  </section>`;
+  }
 
   function viewCM(id) {
     setNav("cms");
@@ -590,6 +673,7 @@
       <div class="score"><b class="num" id="score">${total ? pct(total) : "–"}</b><span style="color:var(--muted)">WR total<span id="score-n">${raceCount(d.rat)}</span></span></div>
     </div>
   </section>
+  ${metaHtml(id)}
   ${recsHtml(id)}`;
 
     $("#share").addEventListener("click", () => openShare(id));
@@ -656,8 +740,15 @@
       save();
       if (redraw) rerender();
     };
-    const pickUma = () =>
+    const pickUma = () => {
+      // Umas mais usadas no top do JP (LoH) aparecem primeiro, com o uso em %
+      const m = META[pickerPvp];
+      pickerUmas = new Map(
+        m ? m.umas.filter((u) => u.site).map((u) => [u.n, u.use]) : [],
+      );
       openPicker("char", t.n, `Uma ${k + 1}`, (v) => change(() => (t.n = v)));
+      pickerUmas = new Map();
+    };
     card.querySelector(".main").addEventListener("click", pickUma);
     card.querySelector(".rname").addEventListener("click", pickUma);
     card
@@ -799,10 +890,11 @@
   let picker = null;
   let pickerRecs = new Set(); // cartas recomendadas (PvP e estilo da Uma aberta)
   let pickerPvp = null; // PvP da página de Uma aberta
+  let pickerUmas = new Map(); // Umas recomendadas (nome → % de uso no JP)
   const pickerState = { q: "", rarity: new Set(), type: new Set() };
 
   function openPicker(kind, current, title, onPick, score = null) {
-    picker = { kind, onPick, score };
+    picker = { kind, onPick, score, umas: pickerUmas };
     pickerState.q = "";
     $("#pk-q").value = "";
     $("#pk-title").textContent = title;
@@ -845,12 +937,19 @@
       picker.kind === "char"
         ? CAT.chars
             .filter((c) => !q || c.n.toLowerCase().includes(q))
-            .map((c) => ({ c, sc: picker.score ? picker.score(c.n) : null }))
-            // com affinity: da maior para a menor (empates mantêm a ordem do jogo)
-            .sort((a, b) => (picker.score ? b.sc - a.sc : 0))
+            .map((c) => ({
+              c,
+              sc: picker.score ? picker.score(c.n) : null,
+              use: picker.umas.get(c.n),
+            }))
+            // com affinity: da maior para a menor (empates mantêm a ordem do jogo);
+            // Umas do meta do JP primeiro, da mais para a menos usada
+            .sort((a, b) =>
+              picker.score ? b.sc - a.sc : (b.use || 0) - (a.use || 0),
+            )
             .map(
-              ({ c, sc }) =>
-                `<button type="button" data-v="${esc(c.n)}"><span class="im">${charImg(c.n)}${sc != null ? `<b class="aff num" title="Affinity">${sc}</b>` : ""}</span><span>${esc(c.n)}</span></button>`,
+              ({ c, sc, use }) =>
+                `<button type="button" data-v="${esc(c.n)}" class="${use ? "rec" : ""}"><span class="im">${charImg(c.n)}${sc != null ? `<b class="aff num" title="Affinity">${sc}</b>` : ""}${use ? `<b class="recb" title="Used by ${use}% of the JP top">Rec ${Math.round(use)}%</b>` : ""}</span><span>${esc(c.n)}</span></button>`,
             )
         : CAT.cards
             .filter(

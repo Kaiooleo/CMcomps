@@ -1996,3 +1996,140 @@ select[name="st"][class*="st-"] {
 .recs .rhead b[class*="st-"] {
   color: var(--st);
 }
+
+/* ---------- JP meta (LoH) ---------- */
+.jpmeta .msrc {
+  color: var(--faint);
+  font-size: 12px;
+}
+.jpmeta .sublabel {
+  margin: 18px 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.mgrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 24px;
+}
+.mlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+}
+.mlist li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.mskills {
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+}
+.mumas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 12px;
+}
+.mu {
+  display: grid;
+  gap: 2px;
+  text-align: center;
+  font-size: 13px;
+}
+.mu .av {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.mu .av :is(img, .spr) {
+  width: 100%;
+  height: 100%;
+}
+.mu small {
+  font-size: 12px;
+  color: var(--muted);
+}
+.mu.jp .av {
+  opacity: 0.75;
+}
+.jpb {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--loh);
+  color: #fff;
+}
+.mdecks {
+  display: grid;
+  gap: 16px;
+}
+.md {
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+.md .rhead {
+  margin: 0 0 8px;
+}
+.mstructs {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+}
+.mstructs li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mstructs .ico img {
+  width: 24px;
+  height: 24px;
+  margin-right: 2px;
+}
+.mcards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.mcards .rcard {
+  width: 64px;
+}
+.mnote {
+  margin: 16px 0 0;
+  font-size: 12px;
+  color: var(--faint);
+}
+@media (max-width: 760px) {
+  .mgrid {
+    grid-template-columns: 1fr;
+  }
+}
+.jpmeta .rhead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: baseline;
+}
+.jpmeta .rhead span {
+  color: var(--muted);
+  font-size: 13px;
+}
