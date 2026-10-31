@@ -45,6 +45,8 @@
 
   const CHAR = new Map(CAT.chars.map((c) => [c.n, c]));
   const CARD = new Map(CAT.cards.map((c) => [c.k, c]));
+  const CARD_BY_ID = new Map(CAT.cards.map((c) => [String(c.id), c]));
+  const RECS = window.CM_RECS || {};
   const CM_BY_ID = new Map(CAT.cms.map((c, i) => [c.id, { ...c, i }]));
 
   /* ---------- utilidades ---------- */
@@ -518,6 +520,46 @@
   </a>`;
   }
 
+  /** Cartas recomendadas do PvP (recs.js): uma linha de 6 espaços por estilo. */
+  function recsHtml(id) {
+    const list = RECS[id];
+    if (!list || !list.length) return "";
+    const type = (t) =>
+      `<span class="rtype"><img src="icons/ui/${esc(t.toLowerCase())}.webp" alt="" title="${esc(t)}"></span>`;
+    const count = (slots) => {
+      const n = {};
+      for (const sl of slots) n[sl.type] = (n[sl.type] || 0) + 1;
+      return Object.entries(n)
+        .map(([t, k]) => `${k} ${t}`)
+        .join(" · ");
+    };
+    const card = (cid) => {
+      const c = CARD_BY_ID.get(String(cid));
+      return c
+        ? `<span class="rcard" title="${esc(c.n + " – " + c.t)}">${cardImg(c.k)}<small>${esc(c.n)}</small></span>`
+        : "";
+    };
+    const slot = (sl) =>
+      `<div class="rslot">${type(sl.type)}<div class="ralts">${sl.cards.map(card).join('<i class="ror">or</i>')}</div>${sl.note ? `<em class="rnote">${esc(sl.note)}</em>` : ""}</div>`;
+    return `<section class="panel recs"><div class="label">Recommended cards</div>
+    ${list
+      .map(
+        (r) => `<div class="rec">
+      <div class="rhead"><b>${esc(r.style || "Deck")}</b><span>${esc(count(r.slots))}</span></div>
+      <div class="rslots">${r.slots.map(slot).join("")}</div></div>`,
+      )
+      .join("")}
+  </section>`;
+  }
+
+  /** Números das cartas recomendadas num PvP (para aparecerem primeiro no seletor). */
+  const recCardIds = (id) =>
+    new Set(
+      (RECS[id] || []).flatMap((r) =>
+        r.slots.flatMap((s) => s.cards.map(String)),
+      ),
+    );
+
   function viewCM(id) {
     setNav("cms");
     const cm = CM_BY_ID.get(id);
@@ -544,7 +586,8 @@
         .join("")}</div>
       <div class="score"><b class="num" id="score">${total ? pct(total) : "–"}</b><span style="color:var(--muted)">WR total<span id="score-n">${raceCount(d.rat)}</span></span></div>
     </div>
-  </section>`;
+  </section>
+  ${recsHtml(id)}`;
 
     $("#share").addEventListener("click", () => openShare(id));
     document.querySelectorAll("[data-pl]").forEach((b) =>
@@ -573,6 +616,7 @@
   /* ---------- página de uma Uma (dentro de um PvP) ---------- */
   function viewUma(id, k) {
     setNav("cms");
+    pickerRecs = recCardIds(id);
     const cm = CM_BY_ID.get(id);
     const d = record(id);
     const t = d.team[k];
@@ -749,6 +793,7 @@
 
   /* ---------- seletor de Uma / carta ---------- */
   let picker = null;
+  let pickerRecs = new Set(); // cartas recomendadas do PvP aberto
   const pickerState = { q: "", rarity: new Set(), type: new Set() };
 
   function openPicker(kind, current, title, onPick, score = null) {
@@ -809,9 +854,12 @@
                 (!pickerState.rarity.size || pickerState.rarity.has(c.r)) &&
                 (!pickerState.type.size || pickerState.type.has(c.ty)),
             )
+            // recomendadas deste PvP primeiro, com o selo "Rec"
+            .map((c) => ({ c, rec: pickerRecs.has(String(c.id)) }))
+            .sort((a, b) => b.rec - a.rec)
             .map(
-              (c) =>
-                `<button type="button" data-v="${esc(c.k)}"><span class="im">${cardImg(c.k)}</span><span><b>${esc(c.n)}</b><br><small>${esc(c.t)}</small></span></button>`,
+              ({ c, rec }) =>
+                `<button type="button" data-v="${esc(c.k)}" class="${rec ? "rec" : ""}"><span class="im">${cardImg(c.k)}${rec ? '<b class="recb">Rec</b>' : ""}</span><span><b>${esc(c.n)}</b><br><small>${esc(c.t)}</small></span></button>`,
             );
     list.innerHTML = items.length
       ? items.join("")
