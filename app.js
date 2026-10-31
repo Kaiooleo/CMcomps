@@ -545,19 +545,22 @@
     ${list
       .map(
         (r) => `<div class="rec">
-      <div class="rhead"><b>${esc(r.style || "Deck")}</b><span>${esc(count(r.slots))}</span></div>
+      <div class="rhead"><b class="${stClass(r.style)}">${esc(r.style || "Deck")}</b><span>${esc(count(r.slots))}</span></div>
       <div class="rslots">${r.slots.map(slot).join("")}</div></div>`,
       )
       .join("")}
   </section>`;
   }
 
-  /** Números das cartas recomendadas num PvP (para aparecerem primeiro no seletor). */
-  const recCardIds = (id) =>
+  /**
+   * Números das cartas recomendadas num PvP para o estilo da Uma
+   * (para aparecerem primeiro no seletor). Uma sem estilo vê todas.
+   */
+  const recCardIds = (id, style) =>
     new Set(
-      (RECS[id] || []).flatMap((r) =>
-        r.slots.flatMap((s) => s.cards.map(String)),
-      ),
+      (RECS[id] || [])
+        .filter((r) => !style || !r.style || r.style === style)
+        .flatMap((r) => r.slots.flatMap((sl) => sl.cards.map(String))),
     );
 
   function viewCM(id) {
@@ -616,7 +619,7 @@
   /* ---------- página de uma Uma (dentro de um PvP) ---------- */
   function viewUma(id, k) {
     setNav("cms");
-    pickerRecs = recCardIds(id);
+    pickerPvp = id;
     const cm = CM_BY_ID.get(id);
     const d = record(id);
     const t = d.team[k];
@@ -709,6 +712,7 @@
         const j = +b.dataset.d;
         const title =
           j === L.BORROWED_SLOT ? "Borrowed card" : `Support card ${j + 1}`;
+        pickerRecs = recCardIds(pickerPvp, t.st);
         openPicker("card", t.d[j], title, (v) =>
           change(() => {
             // carta nova entra como MLB; dá para trocar depois
@@ -793,7 +797,8 @@
 
   /* ---------- seletor de Uma / carta ---------- */
   let picker = null;
-  let pickerRecs = new Set(); // cartas recomendadas do PvP aberto
+  let pickerRecs = new Set(); // cartas recomendadas (PvP e estilo da Uma aberta)
+  let pickerPvp = null; // PvP da página de Uma aberta
   const pickerState = { q: "", rarity: new Set(), type: new Set() };
 
   function openPicker(kind, current, title, onPick, score = null) {
