@@ -1993,3 +1993,6 @@ select[name="st"][class*="st-"] {
     margin-top: -18px;
   }
 }
+.recs .rhead b[class*="st-"] {
+  color: var(--st);
+}
