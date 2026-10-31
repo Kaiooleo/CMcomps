@@ -455,3 +455,21 @@ test("estatísticas novas: wins por distância e por cenário; parents e avós",
   assert.deepEqual(s.parents, [["Gold Ship", 3]]);
   assert.deepEqual(s.grandparents, [["Vodka", 1]]);
 });
+
+test("releasedBy: Uma/carta lançada até o fim do PvP", () => {
+  const pvp = { id: "CM5", jp: "2021-09-27" };
+  // com data Global dos dois lados, compara no Global
+  assert.equal(
+    L.releasedBy({ rj: "2021-10-01", re: "2025-11-20" }, pvp, "2025-11-26"),
+    true,
+  );
+  assert.equal(
+    L.releasedBy({ rj: "2021-09-01", re: "2025-12-01" }, pvp, "2025-11-26"),
+    false,
+  );
+  // sem data Global, compara no JP
+  assert.equal(L.releasedBy({ rj: "2021-09-27" }, pvp, "2025-11-26"), true);
+  assert.equal(L.releasedBy({ rj: "2021-09-28" }, pvp, null), false);
+  // PvP sem data: mostra tudo
+  assert.equal(L.releasedBy({ rj: "2030-01-01" }, { id: "CM53" }, null), true);
+});

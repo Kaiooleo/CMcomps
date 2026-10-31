@@ -582,6 +582,7 @@
           `<a class="tog" href="#uma-${esc(id)}-${j + 1}" aria-pressed="${j === k}">${u.n ? esc(u.n) : "Uma " + (j + 1)}</a>`,
       )
       .join("");
+    pickerPvp = cm;
     $("#app").innerHTML = `
   ${pvpHead(cm, ` <span class="sub">· Uma ${k + 1}</span>`)}
   <nav class="seg umatabs" aria-label="Umas in this PvP">${tabs}</nav>
@@ -749,6 +750,14 @@
 
   /* ---------- seletor de Uma / carta ---------- */
   let picker = null;
+  // PvP da página aberta: o seletor só mostra Umas e cartas lançadas até ele
+  let pickerPvp = null;
+  const glEndOf = (id) => {
+    const e = (window.CM_SCHEDULE || {})[id];
+    return e && !e.est && L.validDate(e.end) ? e.end : null;
+  };
+  const inPvp = (item) =>
+    !pickerPvp || L.releasedBy(item, pickerPvp, glEndOf(pickerPvp.id));
   const pickerState = { q: "", rarity: new Set(), type: new Set() };
 
   function openPicker(kind, current, title, onPick, score = null) {
@@ -794,7 +803,7 @@
     const items =
       picker.kind === "char"
         ? CAT.chars
-            .filter((c) => !q || c.n.toLowerCase().includes(q))
+            .filter((c) => inPvp(c) && (!q || c.n.toLowerCase().includes(q)))
             .map((c) => ({ c, sc: picker.score ? picker.score(c.n) : null }))
             // com affinity: da maior para a menor (empates mantêm a ordem do jogo)
             .sort((a, b) => (picker.score ? b.sc - a.sc : 0))
@@ -805,6 +814,7 @@
         : CAT.cards
             .filter(
               (c) =>
+                inPvp(c) &&
                 (!q || (c.n + " " + c.t).toLowerCase().includes(q)) &&
                 (!pickerState.rarity.size || pickerState.rarity.has(c.r)) &&
                 (!pickerState.type.size || pickerState.type.has(c.ty)),

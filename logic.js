@@ -468,7 +468,21 @@
     return { total, mark: affinityMark(total), parts };
   }
 
+  /**
+   * A Uma/carta já tinha saído até o fim deste PvP?
+   * item: { rj, re } = lançamento no JP e no Global; pvp: { jp } = último dia no JP;
+   * glEnd = último dia oficial no Global (se houver). Com data Global dos dois
+   * lados compara no Global; senão compara no JP; sem datas, mostra tudo.
+   */
+  function releasedBy(item, pvp, glEnd) {
+    if (!item || !pvp) return true;
+    if (glEnd && item.re) return item.re <= glEnd;
+    if (pvp.jp && item.rj) return item.rj <= pvp.jp;
+    return true;
+  }
+
   return {
+    releasedBy,
     charaId,
     AFF_SEGMENTS,
     affinityMark,

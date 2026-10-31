@@ -97,7 +97,13 @@ test("preencher um PvP salva no navegador e continua lá depois de recarregar", 
   const scores = await page.$$eval("#pk-list .aff", (els) =>
     els.map((e) => +e.textContent),
   );
-  assert.ok(scores.length > 100, "todas as opções têm affinity");
+  assert.ok(scores.length > 30, "todas as opções têm affinity");
+  // só aparecem Umas lançadas até o CM5 (Global: até 26/11/2025)
+  const names = await page.$$eval("#pk-list button", (els) =>
+    els.map((e) => e.dataset.v),
+  );
+  assert.ok(names.includes("Special Week"), "Uma do lançamento aparece");
+  assert.ok(!names.includes("Seiun Sky (Summer)"), "Uma de 2026 não aparece");
   assert.deepEqual(
     scores,
     [...scores].sort((a, b) => b - a),
