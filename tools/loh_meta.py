@@ -14,7 +14,10 @@ import sys
 
 rows_f, pvp, date, cat_f, skills_f = sys.argv[1:6]
 rows = json.load(open(rows_f))
-cat = json.load(open(cat_f))  # {"chars": {card_id: nome}, "cards": {id: [...]}}
+# {"chars": {card_id do JP: nome no site}, "cards": {id: [nome, título, tipo, raridade]}}
+# Atenção: o número das roupas no JP (card_id) não é o mesmo dos arquivos do site;
+# a ligação card_id → nome foi feita comparando as artes (GameTora × img/s).
+cat = json.load(open(cat_f))
 skills = json.load(open(skills_f))["out"]
 extra = json.loads(sys.argv[6]) if len(sys.argv) > 6 else {}  # nomes de roupas que não estão no site
 
