@@ -3,3 +3,4 @@ sp/
 package-lock.json
 affinity.js
 meta.js
+theme.js
