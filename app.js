@@ -1503,10 +1503,15 @@
   function applyPartner(name) {
     const c = name ? CHAR.get(name) : null;
     const cid = c ? L.charaId(c.i) : CHEVAL;
-    const group = THEMES[cid];
+    const tc = THEMES[cid];
     const root = document.documentElement;
-    if (group && group !== "teal") root.dataset.palette = group;
-    else delete root.dataset.palette;
+    if (tc && tc !== "default") {
+      root.dataset.tc = "";
+      root.style.setProperty("--tc", "#" + tc);
+    } else {
+      delete root.dataset.tc;
+      root.style.removeProperty("--tc");
+    }
     // logo: a chibi da roupa escolhida (parada; acenando ao passar o mouse).
     // A Cheval original continua com as chibis de sempre; sem chibi, o ícone.
     const btn = $("#brand-uma");
