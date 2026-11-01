@@ -656,14 +656,26 @@
   </section>`;
   }
 
+  const TAB_KEY = "cmcomps:pvptab";
   function viewCM(id) {
     setNav("cms");
     const cm = CM_BY_ID.get(id);
     const d = record(id);
     const total = L.ratingScore(d.rat);
+    // PvPs com meta/recomendações: abas "My team" | "JP meta" (lembra a última)
+    const extra = metaHtml(id) + recsHtml(id);
+    let tab = "team";
+    try {
+      if (extra && localStorage.getItem(TAB_KEY) === "meta") tab = "meta";
+    } catch {}
+    const tabs = extra
+      ? `<nav class="seg pvptabs" aria-label="PvP sections"><button type="button" class="tog" data-tab="team" aria-pressed="${tab === "team"}">My team</button><button type="button" class="tog" data-tab="meta" aria-pressed="${tab === "meta"}">${META[id] ? "JP meta" : "Recommended"}</button></nav>`
+      : "";
     $("#app").innerHTML = `
   ${pvpHead(cm)}
   ${currentNote(id)}
+  ${tabs}
+  <div data-pane="team" ${tab === "team" ? "" : "hidden"}>
   <section class="umacards">${d.team.map((t, k) => umaCardHtml(id, t, k)).join("")}</section>
   <section class="result">
     <div class="panel"><div class="label">Final</div>
@@ -683,8 +695,22 @@
       <div class="score"><b class="num" id="score">${total ? pct(total) : "–"}</b><span style="color:var(--muted)">WR total<span id="score-n">${raceCount(d.rat)}</span></span></div>
     </div>
   </section>
-  ${metaHtml(id)}
-  ${recsHtml(id)}`;
+  </div>
+  ${extra ? `<div data-pane="meta" ${tab === "meta" ? "" : "hidden"}>${extra}</div>` : ""}`;
+    document.querySelectorAll(".pvptabs [data-tab]").forEach((b) =>
+      b.addEventListener("click", () => {
+        const v = b.dataset.tab;
+        try {
+          localStorage.setItem(TAB_KEY, v);
+        } catch {}
+        document
+          .querySelectorAll(".pvptabs [data-tab]")
+          .forEach((x) => x.setAttribute("aria-pressed", x === b));
+        document
+          .querySelectorAll("[data-pane]")
+          .forEach((x) => (x.hidden = x.dataset.pane !== v));
+      }),
+    );
 
     $("#share").addEventListener("click", () => openShare(id));
     document.querySelectorAll("[data-pl]").forEach((b) =>

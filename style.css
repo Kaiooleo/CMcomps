@@ -2133,3 +2133,8 @@ select[name="st"][class*="st-"] {
   color: var(--muted);
   font-size: 13px;
 }
+
+/* abas "My team | JP meta" na página do PvP */
+.pvptabs {
+  margin: 4px 0 0;
+}

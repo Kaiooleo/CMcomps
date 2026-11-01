@@ -332,7 +332,11 @@ test("voltar para a lista de PvP mantém a posição da rolagem", async () => {
 test("cartas recomendadas: aparecem no PvP e só para o estilo certo no seletor", async () => {
   const { context, page, errors } = await openPage();
   await page.goto(base + "#cm-CM22");
+  // as recomendações ficam numa aba separada do time
+  assert.equal(await page.locator(".recs .rcard").first().isVisible(), false);
+  await page.click('.pvptabs [data-tab="meta"]');
   await page.waitForSelector(".recs .rcard");
+  assert.equal(await page.locator(".umacards").isVisible(), false);
   await page.goto(base + "#uma-CM22-1");
   await page.waitForSelector(".runner.big");
   await page.selectOption('.runner [name="st"]', "Late Surger");
