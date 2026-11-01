@@ -620,18 +620,14 @@
   </section>`;
   }
 
-  const TAB_KEY = "cmcomps:pvptab";
   function viewCM(id) {
     setNav("cms");
     const cm = CM_BY_ID.get(id);
     const d = record(id);
     const total = L.ratingScore(d.rat);
-    // PvPs com JP meta: abas "My team" | "JP meta" (lembra a última)
+    // PvPs com JP meta: abas "My team" | "JP meta"; sempre abre em "My team"
     const extra = metaHtml(id);
-    let tab = "team";
-    try {
-      if (extra && localStorage.getItem(TAB_KEY) === "meta") tab = "meta";
-    } catch {}
+    const tab = "team";
     const tabs = extra
       ? `<nav class="seg pvptabs" aria-label="PvP sections"><button type="button" class="tog" data-tab="team" aria-pressed="${tab === "team"}">My team</button><button type="button" class="tog" data-tab="meta" aria-pressed="${tab === "meta"}">JP meta</button></nav>`
       : "";
@@ -664,9 +660,6 @@
     document.querySelectorAll(".pvptabs [data-tab]").forEach((b) =>
       b.addEventListener("click", () => {
         const v = b.dataset.tab;
-        try {
-          localStorage.setItem(TAB_KEY, v);
-        } catch {}
         document
           .querySelectorAll(".pvptabs [data-tab]")
           .forEach((x) => x.setAttribute("aria-pressed", x === b));

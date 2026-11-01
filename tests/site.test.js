@@ -337,6 +337,10 @@ test("JP meta: aba separada do time e cartas Rec só para o estilo certo", async
   await page.click('.pvptabs [data-tab="meta"]');
   await page.waitForSelector(".jpmeta");
   assert.equal(await page.locator(".umacards").isVisible(), false);
+  // outro LoH (ou o mesmo de novo) sempre abre em "My team"
+  await page.goto(base + "#cm-LOH15");
+  await page.waitForSelector(".umacards");
+  assert.equal(await page.locator(".jpmeta").isVisible(), false);
   // seletor de cartas: Rec = cartas do top do JP no estilo da Uma
   await page.goto(base + "#uma-LOH16-1");
   await page.waitForSelector(".runner.big");
