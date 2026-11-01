@@ -46,7 +46,6 @@
   const CHAR = new Map(CAT.chars.map((c) => [c.n, c]));
   const CARD = new Map(CAT.cards.map((c) => [c.k, c]));
   const CARD_BY_ID = new Map(CAT.cards.map((c) => [String(c.id), c]));
-  const RECS = window.CM_RECS || {};
   const META = window.CM_META || {};
   const META_CARD_MIN = 20; // % de uso no estilo para a carta virar "Rec" no seletor
   const META_UMA_MIN = 5; // % de uso no top para a Uma virar "Rec" no seletor
@@ -523,47 +522,12 @@
   </a>`;
   }
 
-  /** Cartas recomendadas do PvP (recs.js): uma linha de 6 espaços por estilo. */
-  function recsHtml(id) {
-    const list = RECS[id];
-    if (!list || !list.length) return "";
-    const type = (t) =>
-      `<span class="rtype"><img src="icons/ui/${esc(t.toLowerCase())}.webp" alt="" title="${esc(t)}"></span>`;
-    const count = (slots) => {
-      const n = {};
-      for (const sl of slots) n[sl.type] = (n[sl.type] || 0) + 1;
-      return Object.entries(n)
-        .map(([t, k]) => `${k} ${t}`)
-        .join(" · ");
-    };
-    const card = (cid) => {
-      const c = CARD_BY_ID.get(String(cid));
-      return c
-        ? `<span class="rcard" title="${esc(c.n + " – " + c.t)}">${cardImg(c.k)}<small>${esc(c.n)}</small></span>`
-        : "";
-    };
-    const slot = (sl) =>
-      `<div class="rslot">${type(sl.type)}<div class="ralts">${sl.cards.map(card).join('<i class="ror">or</i>')}</div>${sl.note ? `<em class="rnote">${esc(sl.note)}</em>` : ""}</div>`;
-    return `<section class="panel recs"><div class="label">Recommended cards</div>
-    ${list
-      .map(
-        (r) => `<div class="rec">
-      <div class="rhead"><b class="${stClass(r.style)}">${esc(r.style || "Deck")}</b><span>${esc(count(r.slots))}</span></div>
-      <div class="rslots">${r.slots.map(slot).join("")}</div></div>`,
-      )
-      .join("")}
-  </section>`;
-  }
-
   /**
-   * Números das cartas recomendadas num PvP para o estilo da Uma
-   * (para aparecerem primeiro no seletor). Uma sem estilo vê todas.
+   * Cartas mais usadas no top do JP (meta.js) para o estilo da Uma, para
+   * aparecerem primeiro no seletor como "Rec". Uma sem estilo vê as de todos.
    */
   const recCardIds = (id, style) => {
-    const ids = (RECS[id] || [])
-      .filter((r) => !style || !r.style || r.style === style)
-      .flatMap((r) => r.slots.flatMap((sl) => sl.cards.map(String)));
-    // + as cartas mais usadas nesse estilo no top do JP (meta.js)
+    const ids = [];
     const decks = (META[id] && META[id].decks) || {};
     for (const [st, d] of Object.entries(decks))
       if (!style || st === style)
@@ -662,14 +626,14 @@
     const cm = CM_BY_ID.get(id);
     const d = record(id);
     const total = L.ratingScore(d.rat);
-    // PvPs com meta/recomendações: abas "My team" | "JP meta" (lembra a última)
-    const extra = metaHtml(id) + recsHtml(id);
+    // PvPs com JP meta: abas "My team" | "JP meta" (lembra a última)
+    const extra = metaHtml(id);
     let tab = "team";
     try {
       if (extra && localStorage.getItem(TAB_KEY) === "meta") tab = "meta";
     } catch {}
     const tabs = extra
-      ? `<nav class="seg pvptabs" aria-label="PvP sections"><button type="button" class="tog" data-tab="team" aria-pressed="${tab === "team"}">My team</button><button type="button" class="tog" data-tab="meta" aria-pressed="${tab === "meta"}">${META[id] ? "JP meta" : "Recommended"}</button></nav>`
+      ? `<nav class="seg pvptabs" aria-label="PvP sections"><button type="button" class="tog" data-tab="team" aria-pressed="${tab === "team"}">My team</button><button type="button" class="tog" data-tab="meta" aria-pressed="${tab === "meta"}">JP meta</button></nav>`
       : "";
     $("#app").innerHTML = `
   ${pvpHead(cm)}

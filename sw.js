@@ -9,14 +9,13 @@
  *
  * Suba CACHE quando quiser forçar todos a baixarem tudo de novo.
  */
-const CACHE = "cmcomps-v34";
+const CACHE = "cmcomps-v35";
 const CORE = [
   "./",
   "index.html",
   "style.css",
   "data.js",
   "affinity.js",
-  "recs.js",
   "meta.js",
   "logic.js",
   "app.js",
