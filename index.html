@@ -64,17 +64,25 @@
           </button></span
         >
         <div class="brand">
-          <span class="chibi"
-            ><img
+          <button
+            type="button"
+            class="chibi"
+            id="brand-uma"
+            title="Change the site's Uma"
+            aria-label="Change the site's Uma"
+          >
+            <img
               src="icons/cheval-chibi.webp"
               alt=""
               width="40"
-              height="40" /><img
+              height="40"
+            /><img
               class="alt"
               src="icons/cheval-chibi-hover.webp"
               alt=""
               width="40"
-              height="40" /></span
+              height="40"
+            /><span class="uma" id="brand-icon" hidden></span></button
           >Comps
         </div>
         <nav>
@@ -163,6 +171,7 @@
     </dialog>
 
     <script src="data.js"></script>
+    <script src="theme.js"></script>
     <script src="affinity.js"></script>
     <script src="meta.js"></script>
     <script src="logic.js"></script>

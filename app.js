@@ -1496,6 +1496,45 @@
   });
   showName();
 
+  /* ---------- Uma do logo: muda o tema do site (cores do grupo dela) ---------- */
+  const PARTNER_KEY = "cmcomps:partner";
+  const THEMES = window.CM_THEMES || {};
+  const CHEVAL = "1089";
+  function applyPartner(name) {
+    const c = name ? CHAR.get(name) : null;
+    const cid = c ? L.charaId(c.i) : CHEVAL;
+    const group = THEMES[cid];
+    const root = document.documentElement;
+    if (group && group !== "teal") root.dataset.palette = group;
+    else delete root.dataset.palette;
+    const btn = $("#brand-uma");
+    const custom = cid !== CHEVAL; // a Cheval continua com as chibis
+    btn.classList.toggle("custom", custom);
+    $("#brand-icon").hidden = !custom;
+    $("#brand-icon").innerHTML = custom ? charImg(name) : "";
+  }
+  let partner = null;
+  try {
+    partner = localStorage.getItem(PARTNER_KEY);
+  } catch {}
+  if (partner && !CHAR.has(partner)) partner = null;
+  applyPartner(partner);
+  $("#brand-uma").addEventListener("click", () => {
+    // o seletor mostra todas as Umas, sem filtro de PvP nem Rec
+    const keepPvp = pickerPvp;
+    pickerPvp = null;
+    pickerUmas = new Map();
+    openPicker("char", partner, "Site Uma", (v) => {
+      partner = v || null;
+      try {
+        if (partner) localStorage.setItem(PARTNER_KEY, partner);
+        else localStorage.removeItem(PARTNER_KEY);
+      } catch {}
+      applyPartner(partner);
+    });
+    pickerPvp = keepPvp;
+  });
+
   // Arquivo de backup escolhido da primeira vez (Chrome/Edge no computador):
   // os próximos backups substituem esse mesmo arquivo, sem perguntar de novo.
   const HANDLE_DB = "cmcomps";
