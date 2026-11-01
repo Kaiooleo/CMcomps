@@ -1507,8 +1507,17 @@
     const root = document.documentElement;
     if (group && group !== "teal") root.dataset.palette = group;
     else delete root.dataset.palette;
+    // logo: a chibi da roupa escolhida (parada; acenando ao passar o mouse).
+    // A Cheval original continua com as chibis de sempre; sem chibi, o ícone.
     const btn = $("#brand-uma");
-    const custom = cid !== CHEVAL; // a Cheval continua com as chibis
+    const [a, b] = btn.querySelectorAll("img");
+    const card = c && (window.CM_CHIBI || {})[c.n];
+    const cheval = !c || c.n === "Cheval Grand";
+    a.src = cheval ? "icons/cheval-chibi.webp" : `icons/chibi/${card}-a.webp`;
+    b.src = cheval
+      ? "icons/cheval-chibi-hover.webp"
+      : `icons/chibi/${card}-b.webp`;
+    const custom = !cheval && !card;
     btn.classList.toggle("custom", custom);
     $("#brand-icon").hidden = !custom;
     $("#brand-icon").innerHTML = custom ? charImg(name) : "";
