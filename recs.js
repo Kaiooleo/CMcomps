@@ -5,17 +5,15 @@
 // pelo número da carta (o mesmo do link do uma.guide / GameTora).
 // "note" (opcional) é um lembrete curto que aparece embaixo do espaço.
 window.CM_RECS = {
-  CM22: [
-    {
-      style: "Front Runner",
-      slots: [
-        { type: "Speed", cards: ["30107"] }, // Maruzensky
-        { type: "Speed", cards: ["30028", "30101"] }, // Kitasan Black / Agnes Tachyon
-        { type: "Speed", cards: ["30053"] }, // Taiki Shuttle
-        { type: "Wit", cards: ["30066"] }, // Mihono Bourbon
-        { type: "Wit", cards: ["30010", "30097", "30111"] }, // Fine Motion / Mr. C.B. / Tokai Teio
-        { type: "Pal", cards: ["30052"] }, // Light Hello
-      ],
-    },
-  ],
+  // Exemplo:
+  // CM22: [
+  //   {
+  //     style: "Front Runner",
+  //     slots: [
+  //       { type: "Speed", cards: ["30107"] }, // Maruzensky
+  //       { type: "Wit", cards: ["30010", "30097"] }, // Fine Motion / Mr. C.B.
+  //       …
+  //     ],
+  //   },
+  // ],
 };

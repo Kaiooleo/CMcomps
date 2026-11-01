@@ -331,6 +331,29 @@ test("voltar para a lista de PvP mantém a posição da rolagem", async () => {
 
 test("cartas recomendadas: aparecem no PvP e só para o estilo certo no seletor", async () => {
   const { context, page, errors } = await openPage();
+  // recs.js de teste: deck Front do CM22 (o site em si não tem recomendações agora)
+  const slot = (type, cards) => ({ type, cards });
+  const recs = {
+    CM22: [
+      {
+        style: "Front Runner",
+        slots: [
+          slot("Speed", ["30107"]),
+          slot("Speed", ["30028", "30101"]),
+          slot("Speed", ["30053"]),
+          slot("Wit", ["30066"]),
+          slot("Wit", ["30010", "30097", "30111"]),
+          slot("Pal", ["30052"]),
+        ],
+      },
+    ],
+  };
+  await page.route("**/recs.js", (r) =>
+    r.fulfill({
+      contentType: "text/javascript",
+      body: "window.CM_RECS = " + JSON.stringify(recs) + ";",
+    }),
+  );
   await page.goto(base + "#cm-CM22");
   // as recomendações ficam numa aba separada do time
   assert.equal(await page.locator(".recs .rcard").first().isVisible(), false);
