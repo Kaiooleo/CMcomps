@@ -1705,6 +1705,11 @@ select[name="st"][class*="st-"] {
   color: var(--st);
   font-weight: 600;
 }
+/* na lista aberta do Style, as opções ficam com a fonte normal (a cor só no escolhido) */
+select[name="st"] option {
+  color: var(--fg);
+  font-weight: 400;
+}
 .chip[class*="st-"] {
   border-color: color-mix(in srgb, var(--st) 55%, transparent);
 }
