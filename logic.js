@@ -469,15 +469,16 @@
   }
 
   /**
-   * A Uma/carta já tinha saído até o fim deste PvP?
+   * A Uma/carta já tinha saído até a véspera da final deste PvP?
    * item: { rj, re } = lançamento no JP e no Global; pvp: { jp } = último dia no JP;
-   * glEnd = último dia oficial no Global (se houver). Com data Global dos dois
-   * lados compara no Global; senão compara no JP; sem datas, mostra tudo.
+   * glEnd = último dia oficial no Global (se houver). A final é o último dia − 1,
+   * então o limite é o último dia − 2. Com data Global dos dois lados compara no
+   * Global; senão compara no JP; sem datas, mostra tudo.
    */
   function releasedBy(item, pvp, glEnd) {
     if (!item || !pvp) return true;
-    if (glEnd && item.re) return item.re <= glEnd;
-    if (pvp.jp && item.rj) return item.rj <= pvp.jp;
+    if (glEnd && item.re) return item.re <= addDays(glEnd, -2);
+    if (pvp.jp && item.rj) return item.rj <= addDays(pvp.jp, -2);
     return true;
   }
 

@@ -98,12 +98,16 @@ test("preencher um PvP salva no navegador e continua lá depois de recarregar", 
     els.map((e) => +e.textContent),
   );
   assert.ok(scores.length > 30, "todas as opções têm affinity");
-  // só aparecem Umas lançadas até o CM5 (Global: até 26/11/2025)
+  // CM5 já passou: aparece tudo o que saiu até a véspera da final do Current
   const names = await page.$$eval("#pk-list button", (els) =>
     els.map((e) => e.dataset.v),
   );
   assert.ok(names.includes("Special Week"), "Uma do lançamento aparece");
-  assert.ok(!names.includes("Seiun Sky (Summer)"), "Uma de 2026 não aparece");
+  assert.ok(!names.includes("Seiun Sky (Summer)"), "Uma só do JP não aparece");
+  assert.ok(
+    names.includes("Kitasan Black (New Year)"),
+    "Uma lançada depois do CM5, mas antes do Current, aparece",
+  );
   assert.deepEqual(
     scores,
     [...scores].sort((a, b) => b - a),

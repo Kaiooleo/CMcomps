@@ -756,8 +756,14 @@
     const e = (window.CM_SCHEDULE || {})[id];
     return e && !e.est && L.validDate(e.end) ? e.end : null;
   };
-  const inPvp = (item) =>
-    !pickerPvp || L.releasedBy(item, pickerPvp, glEndOf(pickerPvp.id));
+  // PvPs antes do Current usam o limite do Current (dá para registrar com o que
+  // se tem hoje); o Current e os seguintes usam o próprio limite
+  const inPvp = (item) => {
+    if (!pickerPvp) return true;
+    const cur = CM_BY_ID.get(CONF.cur);
+    const ref = cur && pickerPvp.i < cur.i ? cur : pickerPvp;
+    return L.releasedBy(item, ref, glEndOf(ref.id));
+  };
   const pickerState = { q: "", rarity: new Set(), type: new Set() };
 
   function openPicker(kind, current, title, onPick, score = null) {
