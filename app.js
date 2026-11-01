@@ -583,6 +583,12 @@
     const umaArt = (u) =>
       charImg(u.site ? u.n : CHAR.has(base(u.n)) ? base(u.n) : u.n, true);
     const date = m.date.split("-").reverse().join("/");
+    // fonte: BWIKI (top 300 completo) ou nota de 集計 do note.com (só as Umas mais usadas
+    // têm cartas e skills, então decks e skills são das Umas mais usadas)
+    const src =
+      m.src === "note"
+        ? `<a href="${esc(m.url)}" target="_blank" rel="noopener">note.com (shiny_broom942)</a>`
+        : `<a href="https://wiki.biligame.com/umamusume/LOH-${esc(m.date.replace(/-/g, "."))}" target="_blank" rel="noopener">BWIKI</a>`;
     const styles = m.styles
       .map(
         (s) =>
@@ -620,7 +626,10 @@
           })
           .join("");
         const s = d.stats;
-        return `<div class="md"><div class="rhead"><b class="${stClass(st)}">${esc(st)}</b><span>${d.n} Umas · avg ${s.spd} / ${s.sta} / ${s.pow} / ${s.gut} / ${s.wiz}</span></div>
+        const avg = s
+          ? ` · avg ${s.spd} / ${s.sta} / ${s.pow} / ${s.gut} / ${s.wiz}`
+          : "";
+        return `<div class="md"><div class="rhead"><b class="${stClass(st)}">${esc(st)}</b><span>${d.n} Umas${avg}</span></div>
         <ul class="mstructs">${structs}</ul>
         <div class="mcards">${cards}</div></div>`;
       })
@@ -632,7 +641,7 @@
       )
       .join("");
     return `<section class="panel jpmeta">
-    <div class="phead"><div class="label">JP meta · top ${m.teams} teams</div><small class="msrc">LoH JP ${esc(date)} · data: <a href="https://wiki.biligame.com/umamusume/LOH-${esc(m.date.replace(/-/g, "."))}" target="_blank" rel="noopener">BWIKI</a></small></div>
+    <div class="phead"><div class="label">JP meta · top ${m.teams} teams</div><small class="msrc">LoH JP ${esc(date)} · data: ${src}</small></div>
     <div class="mgrid">
       <div><div class="sublabel">Styles · 1st rate</div><div class="bars wrbars">${styles}</div></div>
       <div><div class="sublabel">Team comps</div><ul class="mlist">${combos}</ul></div>
@@ -643,7 +652,7 @@
     <div class="mdecks">${decks}</div>
     <div class="sublabel">Most common skills</div>
     <ul class="mlist mskills">${skills}</ul>
-    <p class="mnote">Data from the JP server, years before the global. Some Umas and cards may not be out on global yet (marked JP).</p>
+    <p class="mnote">${m.partial ? "Decks and skills come from the most used Umas only. " : ""}Data from the JP server, years before the global. Some Umas and cards may not be out on global yet (marked JP).</p>
   </section>`;
   }
 

@@ -9,7 +9,8 @@ Entradas:
   skn.json      {skill_id: [nome, ...]} (GameTora)
   data.js       catálogo do site (tipo das cartas)
 
-Uso: python3 tools/loh_meta.py all_loh.json charmap.json skn.json data.js > meta.js
+Uso: python3 tools/loh_meta.py all_loh.json charmap.json skn.json data.js [note_meta.json] > meta.js
+(note_meta.json: LoHs que o BWIKI não tem, gerados por tools/loh_meta_note.py)
 """
 import collections as C
 import json
@@ -109,8 +110,10 @@ def summary(pvp, d):
             "combos": combos, "umas": umas, "decks": decks, "skills": skl}
 
 
-order = sorted(ALL, key=lambda k: int(k[3:]))
-out = {k: summary(k, ALL[k]) for k in order}
+out = {k: summary(k, v) for k, v in ALL.items()}
+if len(sys.argv) > 5:
+    out.update(json.load(open(sys.argv[5])))
+out = {k: out[k] for k in sorted(out, key=lambda k: int(k[3:]))}
 print('// "JP meta": resumo do top 300 do ranking do JP para cada LoH (fonte: BWIKI).')
 print("// Gerado por tools/loh_meta.py; não editar à mão.")
 print("window.CM_META = " + json.dumps(out, ensure_ascii=False, separators=(",", ":")) + ";")
