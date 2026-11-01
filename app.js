@@ -49,6 +49,7 @@
   const RECS = window.CM_RECS || {};
   const META = window.CM_META || {};
   const META_CARD_MIN = 20; // % de uso no estilo para a carta virar "Rec" no seletor
+  const META_UMA_MIN = 5; // % de uso no top para a Uma virar "Rec" no seletor
   const CM_BY_ID = new Map(CAT.cms.map((c, i) => [c.id, { ...c, i }]));
 
   /* ---------- utilidades ---------- */
@@ -745,7 +746,11 @@
       // Umas mais usadas no top do JP (LoH) aparecem primeiro, com o uso em %
       const m = META[pickerPvpId];
       pickerUmas = new Map(
-        m ? m.umas.filter((u) => u.site).map((u) => [u.n, u.use]) : [],
+        m
+          ? m.umas
+              .filter((u) => u.site && u.use >= META_UMA_MIN)
+              .map((u) => [u.n, u.use])
+          : [],
       );
       openPicker("char", t.n, `Uma ${k + 1}`, (v) => change(() => (t.n = v)));
       pickerUmas = new Map();
