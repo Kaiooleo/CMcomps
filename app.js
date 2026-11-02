@@ -196,7 +196,7 @@
     const h = location.hash.slice(1);
     if (h.startsWith("cm-") && CM_BY_ID.has(h.slice(3)))
       return viewCM(h.slice(3));
-    const uma = /^uma-(.+)-([123])$/.exec(h);
+    const uma = /^uma-(.+)-([1-9])$/.exec(h);
     if (uma && CM_BY_ID.has(uma[1])) return viewUma(uma[1], uma[2] - 1);
     if (h === "cms") return viewList();
     if (RANKINGS[h]) return viewRanking(h);
@@ -215,7 +215,7 @@
       : days != null
         ? `Final on ${finalLabel()} · ${days <= 0 ? "today" : days === 1 ? "tomorrow" : `${days} days left`}`
         : "Final date not set";
-    const team = d ? d.team.filter((t) => t.n) : [];
+    const team = d ? d.team.slice(0, L.TEAM_SIZE).filter((t) => t.n) : [];
     const teamHtml = team.length
       ? team
           .map(
@@ -372,7 +372,8 @@
 
   function tileHtml(c) {
     const d = DATA[c.id];
-    const team = d ? d.team.filter((t) => t.n) : [];
+    const team = d ? d.team.slice(0, L.TEAM_SIZE).filter((t) => t.n) : [];
+    const nExtra = d ? d.team.slice(L.TEAM_SIZE).filter((t) => t.n).length : 0;
     const ph = phase(c.id);
     // LoH não tem nome próprio: o bloco mostra só o número (ex.: LOH3)
     const title = isLoh(c.id) ? "" : c.nm || c.sc;
@@ -388,7 +389,7 @@
       <div class="top"><h2><span class="cmid ${isLoh(c.id) ? "loh" : ""}">${esc(c.id)}</span>${title ? ` <span class="sc">· ${esc(title)}</span>` : ""}</h2>${chips}</div>
       <div class="ln num">${courseLine(c)}</div>
       <div class="cond"><b>${esc(c.sc)}</b>${cond(c) ? " · " + cond(c) : ""}</div>
-      <div class="faces">${team.map((t) => `<span class="face ${t.ro === "Debuffer" ? "debuff" : ""}" title="${esc(t.n)} · ${esc(t.ro)}">${charImg(t.n, true)}</span>`).join("")}</div>
+      <div class="faces">${team.map((t) => `<span class="face ${t.ro === "Debuffer" ? "debuff" : ""}" title="${esc(t.n)} · ${esc(t.ro)}">${charImg(t.n, true)}</span>`).join("")}${nExtra ? `<span class="more" title="${nExtra} extra Uma${nExtra > 1 ? "s" : ""}">+${nExtra}</span>` : ""}</div>
     </a>`;
   }
 
@@ -449,7 +450,10 @@
     const { wins, races } = L.roundTotals(rat);
     return races ? ` · ${wins} / ${races} wins` : "";
   };
-  const umaWr = (t, total) => (t.w != null ? pct(t.w / total) : "–");
+  const umaWr = (t, total) => (t.w != null ? pct(t.w / (t.r || total)) : "–");
+  /** Rótulo da Uma k: 1–3 principais, depois "Extra 1", "Extra 2"… */
+  const umaLabel = (k) =>
+    k < L.TEAM_SIZE ? `Uma ${k + 1}` : `Extra ${k - L.TEAM_SIZE + 1}`;
 
   function currentNote(id) {
     if (phase(id) !== "current") return "";
@@ -500,7 +504,7 @@
     const total = L.winsTotal(DATA[cmId] && DATA[cmId].rat);
     const href = `#uma-${esc(cmId)}-${k + 1}`;
     if (!t.n)
-      return `<a class="panel umacard empty" href="${href}"><span class="plus">+</span><span>Choose Uma ${k + 1}</span></a>`;
+      return `<a class="panel umacard empty" href="${href}"><span class="plus">+</span><span>Choose ${umaLabel(k)}</span></a>`;
     const mini = (items, img, borrowedAt = -1) =>
       items
         .map(
@@ -513,13 +517,24 @@
     <span class="info">
       <b class="nm">${esc(t.n)}</b>
       <span class="tags"><span class="chip ${t.ro === "Debuffer" ? "deb" : "ace"}">${esc(t.ro)}</span>${t.st ? `<span class="chip ${stClass(t.st)}">${esc(t.st)}</span>` : ""}</span>
-      <span class="wrbox"><span class="label">WR</span><b class="num">${umaWr(t, total)}</b><small>${t.w != null ? `${t.w} / ${total} wins` : "no wins"}</small></span>
+      <span class="wrbox"><span class="label">WR</span><b class="num">${umaWr(t, total)}</b><small>${t.w != null ? `${t.w} / ${t.r || total} wins` : t.r ? `${t.r} races` : "no wins"}</small></span>
     </span>
     <span class="minis">
       <span class="label">Parents</span>${parentsSummary(t.p)}
       <span class="label">Deck</span><span class="mrow deckrow">${mini(t.d, cardImg, L.BORROWED_SLOT)}</span>
     </span>
   </a>`;
+  }
+
+  /** Umas trocadas durante o PvP: cards menores, abaixo das 3 principais. */
+  function extrasHtml(id, d) {
+    const extras = d.team.slice(L.TEAM_SIZE);
+    const room = d.team.length < L.MAX_TEAM;
+    return `<section class="extras">
+    <div class="exhead"><div class="label">Extra Umas</div><small>Umas you swapped in during this PvP. They count in the rankings with ${L.EXTRA_MIN_RACES}+ races.</small></div>
+    ${extras.length ? `<div class="umacards">${extras.map((t, j) => umaCardHtml(id, t, j + L.TEAM_SIZE)).join("")}</div>` : ""}
+    ${room ? `<button type="button" class="btn" id="add-uma">+ Add Uma</button>` : ""}
+  </section>`;
   }
 
   /**
@@ -636,7 +651,11 @@
   ${currentNote(id)}
   ${tabs}
   <div data-pane="team" ${tab === "team" ? "" : "hidden"}>
-  <section class="umacards">${d.team.map((t, k) => umaCardHtml(id, t, k)).join("")}</section>
+  <section class="umacards">${d.team
+    .slice(0, L.TEAM_SIZE)
+    .map((t, k) => umaCardHtml(id, t, k))
+    .join("")}</section>
+  ${extrasHtml(id, d)}
   <section class="result">
     <div class="panel"><div class="label">Final</div>
       <div class="places" role="group" aria-label="Final">${[...PLACES, ""].map((p) => `<button type="button" class="p-${p ? p.replace(" ", "") : "none"}" data-pl="${p}" aria-pressed="${d.pl === p}">${p || "No result"}</button>`).join("")}</div>
@@ -670,6 +689,12 @@
     );
 
     $("#share").addEventListener("click", () => openShare(id));
+    const add = $("#add-uma");
+    if (add)
+      add.addEventListener("click", () => {
+        d.team.push(L.blankUma());
+        location.hash = `uma-${id}-${d.team.length}`;
+      });
     document.querySelectorAll("[data-pl]").forEach((b) =>
       b.addEventListener("click", () => {
         d.pl = b.dataset.pl;
@@ -700,15 +725,19 @@
     const cm = CM_BY_ID.get(id);
     const d = record(id);
     const t = d.team[k];
+    if (!t) {
+      location.hash = "cm-" + id;
+      return;
+    }
     const tabs = d.team
       .map(
         (u, j) =>
-          `<a class="tog" href="#uma-${esc(id)}-${j + 1}" aria-pressed="${j === k}">${u.n ? esc(u.n) : "Uma " + (j + 1)}</a>`,
+          `<a class="tog ${j >= L.TEAM_SIZE ? "extra" : ""}" href="#uma-${esc(id)}-${j + 1}" aria-pressed="${j === k}">${u.n ? esc(u.n) : umaLabel(j)}</a>`,
       )
       .join("");
     pickerPvp = cm;
     $("#app").innerHTML = `
-  ${pvpHead(cm, ` <span class="sub">· Uma ${k + 1}</span>`)}
+  ${pvpHead(cm, ` <span class="sub">· ${umaLabel(k)}</span>`)}
   <nav class="seg umatabs" aria-label="Umas in this PvP">${tabs}</nav>
   <section>${runnerHtml(t, k, true, L.winsTotal(d.rat))}</section>`;
     bindRunner(
@@ -718,6 +747,14 @@
       () => viewUma(id, k),
       L.winsTotal(d.rat),
     );
+    const rm = $("#rm-uma");
+    if (rm)
+      rm.addEventListener("click", () => {
+        if (t.n && !confirm(`Remove ${t.n} from this PvP?`)) return;
+        d.team.splice(k, 1);
+        save();
+        location.hash = "cm-" + id;
+      });
     // abas: troca de Uma sem criar um passo a mais no "voltar" do navegador
     document.querySelectorAll(".umatabs a").forEach((tab) =>
       tab.addEventListener("click", (e) => {
@@ -744,7 +781,7 @@
               .map((u) => [u.n, u.use])
           : [],
       );
-      openPicker("char", t.n, `Uma ${k + 1}`, (v) => change(() => (t.n = v)));
+      openPicker("char", t.n, umaLabel(k), (v) => change(() => (t.n = v)));
       pickerUmas = new Map();
     };
     card.querySelector(".main").addEventListener("click", pickUma);
@@ -762,6 +799,14 @@
     wins.addEventListener("input", () => {
       const v = parseInt(wins.value, 10);
       change(() => (t.w = isNaN(v) ? null : v), false);
+      card.querySelector(".wrp").textContent = umaWr(t, total);
+    });
+    const races = card.querySelector("[name=r]");
+    races.addEventListener("input", () => {
+      const v = parseInt(races.value, 10);
+      change(() => (t.r = v > 0 ? v : null), false);
+      wins.max = t.r || total;
+      card.querySelector(".wins .of").textContent = "/ " + (t.r || total);
       card.querySelector(".wrp").textContent = umaWr(t, total);
     });
     card.querySelectorAll("[data-p]").forEach((b) =>
@@ -783,7 +828,7 @@
         openPicker(
           "char",
           t.p[j],
-          `${PAR[j]} · ${t.n || "Uma " + (k + 1)}`,
+          `${PAR[j]} · ${t.n || umaLabel(k)}`,
           (v) => change(() => (t.p[j] = v)),
           score,
         );
@@ -866,13 +911,14 @@
       .join("");
     return `<article class="panel runner ${big ? "big" : ""} ${t.ro === "Debuffer" ? "debuff" : ""}" data-k="${k}">
     <div class="rtop">${slot("main", t.n ? charImg(t.n, true) : "", "", t.n ? `Change ${t.n}` : "Choose Uma", '<span class="plus">+</span>')}
-      <div><button type="button" class="rname">${t.n ? esc(t.n) : `<span style="color:var(--muted)">Choose Uma ${k + 1}</span>`}</button>
+      <div><button type="button" class="rname">${t.n ? esc(t.n) : `<span style="color:var(--muted)">Choose ${umaLabel(k)}</span>`}</button>
         <div class="fields">
           <label class="nolab"><select name="ro" aria-label="Ace or Debuffer">${ROLES.map((r) => `<option ${t.ro === r ? "selected" : ""}>${r}</option>`).join("")}</select></label>
           <label class="nolab"><select name="st" class="${stClass(t.st)}" aria-label="Style"><option value="">Style —</option>${STYLES.map((s) => `<option ${t.st === s ? "selected" : ""}>${s}</option>`).join("")}</select></label>
-          <label>Wins<span class="wins"><input name="w" type="number" min="0" max="${total}" inputmode="numeric" value="${t.w ?? ""}" aria-label="Wins (out of ${total})"><span class="of">/ ${total}</span></span></label>
+          <label>Wins<span class="wins"><input name="w" type="number" min="0" max="${t.r || total}" inputmode="numeric" value="${t.w ?? ""}" aria-label="Wins"><span class="of">/ ${t.r || total}</span></span></label>
+          <label>Races<span class="wins"><input name="r" type="number" min="1" inputmode="numeric" value="${t.r ?? ""}" placeholder="${total}" aria-label="Races this Uma ran (empty = all ${total})"></span></label>
           <div class="wrbox"><span class="label">WR</span><b class="num wrp">${umaWr(t, total)}</b></div>
-        </div></div></div>
+        </div>${big && k >= L.TEAM_SIZE ? `<button type="button" class="btn rmuma" id="rm-uma">Remove this Uma</button>` : ""}</div></div>
     <div class="lower">
       <div><div class="label">Parents</div>
         <div class="tree">
@@ -1178,7 +1224,7 @@
     const cm = CM_BY_ID.get(id);
     const d = record(id);
     const W = 1600;
-    const H = 840;
+    const H = d.team.slice(L.TEAM_SIZE).some((t) => t.n) ? 932 : 840;
     const cv = document.createElement("canvas");
     cv.width = W;
     cv.height = H;
@@ -1302,11 +1348,11 @@
       ctx.fillText("WR", tx, cy + 146);
       ctx.fillStyle = SH.fg;
       ctx.font = SH.font(800, 34);
-      ctx.fillText(t.w != null ? pct(t.w / total) : "–", tx + 32, cy + 150);
+      ctx.fillText(umaWr(t, total), tx + 32, cy + 150);
       if (t.w != null) {
         ctx.fillStyle = SH.muted;
         ctx.font = SH.font(500, 15);
-        ctx.fillText(`${t.w} / ${total}`, tx + 34, cy + 172);
+        ctx.fillText(`${t.w} / ${t.r || total}`, tx + 34, cy + 172);
       }
 
       // parents: P grande com os dois avós ao lado
@@ -1417,8 +1463,45 @@
       }
     }
 
+    // Umas extras: fileira pequena de ícones, com o WR de cada uma
+    const extras = d.team.slice(L.TEAM_SIZE).filter((t) => t.n);
+    let ey = cy + chh;
+    if (extras.length) {
+      ey += 28;
+      ctx.fillStyle = SH.muted;
+      ctx.font = SH.font(700, 14);
+      ctx.fillText("EXTRA UMAS", P, ey + 38);
+      let ex = P + 120;
+      const total = L.winsTotal(d.rat);
+      for (const t of extras) {
+        const c = CHAR.get(t.n);
+        rrect(ctx, ex, ey, 64, 64, 14);
+        ctx.fillStyle = SH.panel2;
+        ctx.fill();
+        await drawArt(ctx, c && (c.s || c.i), ex, ey, 64, 64, 14, true);
+        if (t.ro === "Debuffer") {
+          rrect(ctx, ex, ey, 64, 64, 14);
+          ctx.strokeStyle = SH.loh;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+        ctx.fillStyle = SH.fg;
+        ctx.font = SH.font(800, 20);
+        ctx.fillText(umaWr(t, total), ex + 76, ey + 30);
+        ctx.fillStyle = SH.muted;
+        ctx.font = SH.font(500, 14);
+        ctx.fillText(
+          t.w != null ? `${t.w} / ${t.r || total}` : t.st || "",
+          ex + 76,
+          ey + 52,
+        );
+        ex += 76 + 104;
+      }
+      ey += 64;
+    }
+
     // rounds e rodapé
-    const fy = cy + chh + 46;
+    const fy = ey + 46;
     ctx.font = SH.font(600, 18);
     let fx = P;
     const labels = ["R1 D1", "R1 D2", "R2 D1", "R2 D2"];

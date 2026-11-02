@@ -473,3 +473,28 @@ test("releasedBy: Uma/carta lançada até a véspera da final", () => {
   // PvP sem data: mostra tudo
   assert.equal(L.releasedBy({ rj: "2030-01-01" }, { id: "CM53" }, null), true);
 });
+
+test("Umas extras: guardadas com corridas, vazias descartadas, rankings só com 20+ corridas", () => {
+  const raw = {
+    team: [
+      { n: "A" },
+      { n: "B" },
+      { n: "C" },
+      { n: "X", w: 3, r: "10" },
+      {},
+      { n: "Y", w: 6, r: 20 },
+    ],
+  };
+  const r = L.normalizeRecord(raw);
+  assert.equal(r.team.length, 5);
+  assert.equal(r.team[3].r, 10);
+  assert.equal(L.umaRaces(r.team[3], r.rat), 10);
+  assert.equal(L.umaRaces(r.team[0], r.rat), L.WINS_TOTAL);
+  const s = L.computeStats([{ id: "CM1" }], { CM1: r });
+  const names = s.aces.map(([n]) => n);
+  assert.deepEqual(names.sort(), ["A", "B", "C", "Y"]);
+  assert.equal(
+    L.normalizeRecord({ team: Array(20).fill({ n: "Z" }) }).team.length,
+    L.MAX_TEAM,
+  );
+});

@@ -10,6 +10,8 @@
 })(typeof self !== "undefined" ? self : this, function () {
   const PLACES = ["1st", "2nd", "3rd", "B 1st"];
   const TEAM_SIZE = 3;
+  const MAX_TEAM = 9; // 3 principais + até 6 extras (Umas trocadas durante o PvP)
+  const EXTRA_MIN_RACES = 20; // extra só conta nos rankings com 1 round inteiro (20 corridas)
   const SLOTS = 6; // pais/avós e cartas do deck
   const ROUNDS = 4;
   const BORROWED_SLOT = 5; // último slot do deck = carta emprestada
@@ -235,8 +237,8 @@
       if (sc > 0) {
         scores.push({ id: cm.id, sc, pl: d.pl });
       }
-      for (const t of d.team || []) {
-        if (!t.n) continue;
+      for (const [i, t] of (d.team || []).entries()) {
+        if (!t.n || !countsInStats(t, i)) continue;
         (t.p || []).forEach((n, i) => {
           if (!n) return;
           const m = i === 0 || i === 3 ? parents : grandparents;
@@ -282,17 +284,22 @@
 
   /* ---------- formato dos dados salvos ---------- */
 
+  function blankUma() {
+    return {
+      n: null,
+      ro: "Ace",
+      st: null,
+      w: null,
+      r: null, // corridas que essa Uma correu (vazio = todas as do PvP)
+      p: Array(SLOTS).fill(null),
+      d: Array(SLOTS).fill(null),
+      lb: Array(SLOTS).fill(null), // limit break de cada carta: 0–4 (4 = MLB) ou null
+    };
+  }
+
   function blankRecord() {
     return {
-      team: Array.from({ length: TEAM_SIZE }, () => ({
-        n: null,
-        ro: "Ace",
-        st: null,
-        w: null,
-        p: Array(SLOTS).fill(null),
-        d: Array(SLOTS).fill(null),
-        lb: Array(SLOTS).fill(null), // limit break de cada carta: 0–4 (4 = MLB) ou null
-      })),
+      team: Array.from({ length: TEAM_SIZE }, blankUma),
       rat: Array(ROUNDS).fill(""),
       pl: "",
     };
@@ -317,19 +324,27 @@
     if (!r || typeof r !== "object") return base;
     base.pl = PLACES.includes(r.pl) ? r.pl : "";
     base.rat = fit(r.rat, ROUNDS, "", (v) => String(v));
-    base.team = base.team.map((blank, i) => {
-      const t = Array.isArray(r.team) && r.team[i] ? r.team[i] : {};
-      const w = parseInt(t.w, 10);
-      return {
-        n: str(t.n),
-        ro: t.ro === "Debuffer" ? "Debuffer" : "Ace",
-        st: str(t.st),
-        w: isNaN(w) ? null : w,
-        p: fit(t.p, SLOTS, null, str),
-        d: fit(t.d, SLOTS, null, str),
-        lb: fit(t.lb, SLOTS, null, lbValue),
-      };
-    });
+    const src = Array.isArray(r.team) ? r.team.slice(0, MAX_TEAM) : [];
+    const team = Array.from(
+      { length: Math.max(TEAM_SIZE, src.length) },
+      (_, i) => {
+        const t = src[i] && typeof src[i] === "object" ? src[i] : {};
+        const w = parseInt(t.w, 10);
+        const rr = parseInt(t.r, 10);
+        return {
+          n: str(t.n),
+          ro: t.ro === "Debuffer" ? "Debuffer" : "Ace",
+          st: str(t.st),
+          w: isNaN(w) ? null : w,
+          r: rr > 0 ? rr : null,
+          p: fit(t.p, SLOTS, null, str),
+          d: fit(t.d, SLOTS, null, str),
+          lb: fit(t.lb, SLOTS, null, lbValue),
+        };
+      },
+    );
+    // extras vazias não são guardadas
+    base.team = team.filter((t, i) => i < TEAM_SIZE || !isEmptyUma(t));
     return base;
   }
 
@@ -360,22 +375,33 @@
     return out;
   }
 
+  /** Uma sem nada preenchido? */
+  function isEmptyUma(t) {
+    return (
+      !t.n &&
+      t.w == null &&
+      t.r == null &&
+      !t.st &&
+      t.ro === "Ace" &&
+      t.p.every((x) => !x) &&
+      t.d.every((x) => !x) &&
+      t.lb.every((x) => x == null)
+    );
+  }
+
   /** PvP sem nada preenchido? (não precisa ser salvo) */
   function isEmptyRecord(r) {
-    return (
-      !r.pl &&
-      r.rat.every((x) => !x) &&
-      r.team.every(
-        (t) =>
-          !t.n &&
-          t.w == null &&
-          !t.st &&
-          t.ro === "Ace" &&
-          t.p.every((x) => !x) &&
-          t.d.every((x) => !x) &&
-          t.lb.every((x) => x == null),
-      )
-    );
+    return !r.pl && r.rat.every((x) => !x) && r.team.every(isEmptyUma);
+  }
+
+  /** Corridas de uma Uma: as que foram anotadas nela ou, sem isso, as do PvP inteiro. */
+  function umaRaces(t, rat) {
+    return (t && t.r) || winsTotal(rat);
+  }
+
+  /** A Uma entra nos rankings? As 3 principais sempre; as extras com 20+ corridas. */
+  function countsInStats(t, i) {
+    return i < TEAM_SIZE || (t.r || 0) >= EXTRA_MIN_RACES;
   }
 
   /** O que vai para o navegador: só os PvPs com algo preenchido, com o número do formato. */
@@ -507,6 +533,13 @@
     roundTotals,
     ratingScore,
     winsTotal,
+    umaRaces,
+    countsInStats,
+    blankUma,
+    isEmptyUma,
+    MAX_TEAM,
+    TEAM_SIZE,
+    EXTRA_MIN_RACES,
     validDate,
     finalPassed,
     phase,

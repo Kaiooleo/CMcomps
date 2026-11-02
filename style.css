@@ -692,6 +692,13 @@ a.btn {
   box-shadow: 0 0 0 2px var(--surface-2);
   flex: none;
 }
+.tile .more {
+  align-self: center;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  padding-left: 2px;
+}
 .tile .face.debuff {
   box-shadow: 0 0 0 2.5px var(--loh);
 }
@@ -1452,6 +1459,35 @@ dialog::backdrop {
 .cmhead h1 .sub {
   color: var(--muted);
   font-size: 0.7em;
+}
+
+/* ---------- Umas extras (trocadas durante o PvP) ---------- */
+.extras {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  margin: 22px 0;
+}
+.extras .exhead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+.extras .exhead small {
+  color: var(--faint);
+  font-size: 12.5px;
+}
+.extras .umacards {
+  width: 100%;
+}
+.umatabs .tog.extra {
+  border-style: dashed;
+}
+.rmuma {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--muted);
 }
 
 /* ---------- página da Uma ---------- */
