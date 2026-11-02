@@ -4,12 +4,14 @@
  * - Código e dados (html, js, css, json): sempre confere com o servidor se
  *   há versão nova e usa a cópia guardada só quando estiver sem internet.
  *   Assim as atualizações chegam na hora.
- * - Imagens (img/, sp/, icons/, og.png): usa a cópia guardada primeiro, porque
- *   quase nunca mudam e são o que mais pesa.
+ * - Imagens (img/, sp/, icons/, og.jpg): mostra a cópia guardada na hora e, ao
+ *   mesmo tempo, confere com o servidor; se a imagem mudou, a cópia é trocada e
+ *   a nova aparece na próxima visita.
  *
- * Suba CACHE quando quiser forçar todos a baixarem tudo de novo.
+ * Com isso nada precisa ser trocado a cada publicação: código e imagens se
+ * atualizam sozinhos. Só mude CACHE se a forma de guardar mudar.
  */
-const CACHE = "cmcomps-v42";
+const CACHE = "cmcomps";
 const CORE = [
   "./",
   "index.html",
@@ -59,7 +61,7 @@ self.addEventListener("activate", (event) => {
 });
 
 const isImage = (url) =>
-  /\/(sp|icons|img)\//.test(url.pathname) || url.pathname.endsWith("og.png");
+  /\/(sp|icons|img)\//.test(url.pathname) || url.pathname.endsWith("og.jpg");
 
 self.addEventListener("fetch", (event) => {
   const req = event.request;
@@ -68,16 +70,20 @@ self.addEventListener("fetch", (event) => {
 
   if (isImage(url)) {
     event.respondWith(
-      caches.match(req).then(
-        (hit) =>
-          hit ||
-          fetch(req).then((res) => {
-            if (res.ok) {
-              const copy = res.clone();
-              caches.open(CACHE).then((cache) => cache.put(req, copy));
-            }
-            return res;
-          }),
+      caches.open(CACHE).then((cache) =>
+        cache.match(req).then((hit) => {
+          const fresh = fetch(req)
+            .then((res) => {
+              if (res.ok) cache.put(req, res.clone());
+              return res;
+            })
+            .catch(() => hit || Response.error());
+          if (hit) {
+            event.waitUntil(fresh); // atualiza a cópia em segundo plano
+            return hit;
+          }
+          return fresh;
+        }),
       ),
     );
     return;

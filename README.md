@@ -10,20 +10,20 @@ Site para montar e acompanhar times de Champions Meeting e League of Heroes de U
 
 ## Arquivos
 
-| Arquivo                | O que tem                                                                         |
-| ---------------------- | --------------------------------------------------------------------------------- |
-| `index.html`           | Estrutura da página, prévia do link e ícones                                      |
-| `style.css`            | Visual (cores, layout, tema claro/escuro)                                         |
-| `logic.js`             | Regras e cálculos: WR, o que conta, estatísticas, formato dos dados e backup      |
-| `app.js`               | Telas e interação: Resumo, lista de PvPs, página do PvP, seletor, salvar e backup |
-| `data.js`              | Current PvP, PvPs, personagens e cartas (não formatado de propósito)              |
-| `affinity.js`          | Grupos de afinidade de cada personagem (GameTora), para a affinity base           |
-| `img/s/`, `img/c/`     | Artes das Umas (512 px) e cartas (360×480) em alta, carregadas só quando aparecem |
-| `sp/`                  | Ícones das Umas agrupados em folhas (192 px)                                      |
-| `sw.js`                | Service worker: permite instalar e abrir sem internet                             |
-| `manifest.webmanifest` | Nome, cores e ícones do app instalado                                             |
-| `icons/`, `og.png`     | Ícones e imagem da prévia do link (Discord etc.)                                  |
-| `tests/`               | Testes automáticos                                                                |
+| Arquivo                | O que tem                                                                                |
+| ---------------------- | ---------------------------------------------------------------------------------------- |
+| `index.html`           | Estrutura da página, prévia do link e ícones                                             |
+| `style.css`            | Visual (cores, layout, tema claro/escuro)                                                |
+| `logic.js`             | Regras e cálculos: WR, o que conta, estatísticas, formato dos dados e backup             |
+| `app.js`               | Telas e interação: Resumo, lista de PvPs, página do PvP, seletor, salvar e backup        |
+| `data.js`              | Current PvP, PvPs, personagens e cartas (não formatado de propósito)                     |
+| `affinity.js`          | Grupos de afinidade de cada personagem (GameTora), para a affinity base                  |
+| `img/s/`, `img/c/`     | Artes das Umas (512 px) e cartas (360×480) em alta, carregadas só quando aparecem        |
+| `sp/`                  | Ícones das Umas agrupados em folhas (192 px)                                             |
+| `sw.js`                | Service worker: permite instalar e abrir sem internet; atualiza código e imagens sozinho |
+| `manifest.webmanifest` | Nome, cores e ícones do app instalado                                                    |
+| `icons/`, `og.jpg`     | Ícones e imagem da prévia do link (Discord etc.)                                         |
+| `tests/`               | Testes automáticos                                                                       |
 
 ## Formato dos dados salvos
 
@@ -37,6 +37,7 @@ npm install
 npx playwright install chromium
 npm test              # testes dos cálculos + teste do site no navegador
 npm run format        # formata com Prettier
+npm run lint          # procura erros comuns com ESLint
 ```
 
-A cada envio para o GitHub, o **GitHub Actions** (`.github/workflows/ci.yml`) confere a formatação e roda os testes. Se algo falhar, o commit fica com um X vermelho.
+A cada envio para o GitHub, o **GitHub Actions** (`.github/workflows/ci.yml`) confere a formatação, procura erros comuns (ESLint) e roda os testes. Se algo falhar, o commit fica com um X vermelho.

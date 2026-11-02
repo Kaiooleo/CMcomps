@@ -1277,7 +1277,7 @@
     // resultado (direita)
     const score = L.ratingScore(d.rat);
     const tot = L.roundTotals(d.rat);
-    let rx = W - P;
+    const rx = W - P;
     ctx.textAlign = "right";
     if (score) {
       ctx.fillStyle = SH.fg;
@@ -1700,7 +1700,7 @@
 
   async function saveToSameFile(text) {
     const name = backupFileName();
-    let saved = await loadHandle();
+    const saved = await loadHandle();
     let handle = saved && saved.forName === name ? saved.handle : null;
     if (handle) {
       const opts = { mode: "readwrite" };
