@@ -1114,7 +1114,7 @@
   /** Espaço com arte; vazio fica tracejado (azul-claro, ou rosa na emprestada). */
   async function slot(ctx, file, x, y, w, h, r, kind = "") {
     const ok = await drawArt(ctx, file, x, y, w, h, r);
-    const color = kind === "borrow" ? "240,112,171" : "143,216,236";
+    const color = kind === "borrow" ? "240,112,171" : hexRgb(SH.accent);
     ctx.save();
     rrect(ctx, x, y, w, h, r);
     if (!ok) {
@@ -1132,7 +1132,49 @@
     ctx.restore();
   }
 
+  // Cores da imagem: sempre o tema escuro; com outra Uma no logo, as cores dela
+  // (mesma conta do style.css para o modo escuro).
+  const SH_BASE = {
+    accent: SH.accent,
+    panel2: SH.panel2,
+    line: SH.line,
+    muted: SH.muted,
+  };
+  /** Converte qualquer cor CSS (oklch, relativa…) em #rrggbb, para o canvas. */
+  function cssToHex(css) {
+    const el = document.createElement("span");
+    el.style.color = css;
+    document.body.appendChild(el);
+    const c = getComputedStyle(el).color;
+    el.remove();
+    const cv = document.createElement("canvas");
+    cv.width = cv.height = 1;
+    const g = cv.getContext("2d");
+    g.fillStyle = c;
+    g.fillRect(0, 0, 1, 1);
+    const [r, gg, b] = g.getImageData(0, 0, 1, 1).data;
+    return (
+      "#" + [r, gg, b].map((v) => v.toString(16).padStart(2, "0")).join("")
+    );
+  }
+  const hexRgb = (h) =>
+    [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)).join(",");
+  function themeShare() {
+    const tc = document.documentElement.style.getPropertyValue("--tc").trim();
+    const t = tc
+      ? {
+          accent: cssToHex(`oklch(from ${tc} max(l, 0.8) min(c, 0.17) h)`),
+          panel2: cssToHex(`oklch(from ${tc} 0.205 0.018 h)`),
+          line: cssToHex(`oklch(from ${tc} 0.29 0.025 h)`),
+          muted: cssToHex(`oklch(from ${tc} 0.74 0.035 h)`),
+        }
+      : SH_BASE;
+    Object.assign(SH, t);
+    SH.place["B 1st"] = SH.accent;
+  }
+
   async function renderShare(id) {
+    themeShare();
     const cm = CM_BY_ID.get(id);
     const d = record(id);
     const W = 1600;
@@ -1149,8 +1191,8 @@
     ctx.fillStyle = SH.bg;
     ctx.fillRect(0, 0, W, H);
     const g = ctx.createRadialGradient(260, 120, 0, 260, 120, 700);
-    g.addColorStop(0, "rgba(143,216,236,0.10)");
-    g.addColorStop(1, "rgba(143,216,236,0)");
+    g.addColorStop(0, `rgba(${hexRgb(SH.accent)},0.10)`);
+    g.addColorStop(1, `rgba(${hexRgb(SH.accent)},0)`);
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
 
@@ -1397,7 +1439,10 @@
     ctx.font = SH.font(600, 18);
     ctx.fillText("kaiooleo.github.io/CMcomps", W - P - 52, fy);
     ctx.textAlign = "left";
-    const chibi = await loadImg("icons/cheval-chibi.webp");
+    // a mesma chibi do logo (a Uma escolhida)
+    const chibi = await loadImg(
+      $("#brand-uma img").getAttribute("src") || "icons/cheval-chibi.webp",
+    );
     if (chibi) ctx.drawImage(chibi, W - P - 46, fy - 34, 44, 44);
     return cv;
   }
