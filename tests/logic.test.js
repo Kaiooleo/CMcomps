@@ -498,3 +498,24 @@ test("Umas extras: guardadas com corridas, vazias descartadas, rankings só com 
     L.MAX_TEAM,
   );
 });
+
+test("estrutura de deck estimada pelo uso das cartas soma 6", () => {
+  const ty = { a: "Speed", b: "Speed", c: "Wit", d: "Power", e: "Stamina" };
+  const cards = [
+    { id: "a", use: 100 },
+    { id: "b", use: 90 },
+    { id: "c", use: 100 },
+    { id: "d", use: 80 },
+    { id: "e", use: 50 },
+  ];
+  const s = L.estimateStruct(cards, (id) => ty[id]);
+  assert.equal(
+    s.reduce((a, [, k]) => a + k, 0),
+    6,
+  );
+  assert.deepEqual(s[0].slice(0, 2), ["Speed", 3]);
+  assert.deepEqual(
+    L.estimateStruct([], () => null),
+    [],
+  );
+});

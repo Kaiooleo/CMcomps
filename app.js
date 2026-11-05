@@ -594,12 +594,23 @@
       `<img src="icons/ui/${esc(t.toLowerCase())}.webp" alt="${esc(t)}" title="${esc(t)}">`;
     const decks = Object.entries(m.decks)
       .map(([st, d]) => {
-        const structs = d.structs
-          .map(
-            (x) =>
-              `<li><span class="ico">${x.t.map(([t, k]) => Array(k).fill(typeIcon(t)).join("")).join("")}</span><b class="num">${p(x.use)}</b></li>`,
-          )
-          .join("");
+        const icons = (t) =>
+          t.map(([ty, k]) => Array(k).fill(typeIcon(ty)).join("")).join("");
+        // fonte sem o deck de cada time (note.com): estrutura estimada pelo uso das cartas
+        const est = d.structs.length
+          ? []
+          : L.estimateStruct(d.cards, (cid) => {
+              const c = CARD_BY_ID.get(String(cid));
+              return c && c.ty;
+            });
+        const structs = est.length
+          ? `<li class="estli" title="Estimated from card usage: this source has the % of each card, not each team's deck"><span class="ico">${icons(est)}</span><small class="est">typical deck (est.) · avg per deck: ${est.map(([ty, , a]) => `${esc(ty)} ${a}`).join(" · ")}</small></li>`
+          : d.structs
+              .map(
+                (x) =>
+                  `<li><span class="ico">${icons(x.t)}</span><b class="num">${p(x.use)}</b></li>`,
+              )
+              .join("");
         const cards = d.cards
           .map((c) => {
             const card = CARD_BY_ID.get(String(c.id));

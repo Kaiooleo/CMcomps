@@ -282,6 +282,37 @@
     };
   }
 
+  /**
+   * Estrutura de deck estimada a partir do uso de cada carta (para fontes que só
+   * trazem o % de uso das cartas, sem o deck de cada time). Cada carta com uso u%
+   * conta u/100 cartas do tipo dela; o total é arredondado para 6 pelo maior resto.
+   * Devolve [[tipo, quantidade, média de cartas desse tipo por deck], ...] da maior
+   * para a menor quantidade (tipos com média baixa vêm com quantidade 0).
+   */
+  function estimateStruct(cards, typeOf, size = SLOTS) {
+    const sum = {};
+    for (const c of cards || []) {
+      const t = typeOf(c.id);
+      if (t) sum[t] = (sum[t] || 0) + c.use / 100;
+    }
+    const total = Object.values(sum).reduce((a, b) => a + b, 0);
+    if (!total) return [];
+    const rows = Object.entries(sum).map(([t, v]) => {
+      const x = (v * size) / total;
+      return { t, k: Math.floor(x), rest: x - Math.floor(x), avg: x };
+    });
+    let left = size - rows.reduce((a, r) => a + r.k, 0);
+    for (const r of [...rows].sort((a, b) => b.rest - a.rest)) {
+      if (left <= 0) break;
+      r.k++;
+      left--;
+    }
+    return rows
+      .filter((r) => r.avg >= 0.05)
+      .sort((a, b) => b.k - a.k || b.avg - a.avg)
+      .map((r) => [r.t, r.k, Math.round(r.avg * 10) / 10]);
+  }
+
   /* ---------- formato dos dados salvos ---------- */
 
   function blankUma() {
@@ -533,6 +564,7 @@
     roundTotals,
     ratingScore,
     winsTotal,
+    estimateStruct,
     umaRaces,
     countsInStats,
     blankUma,

@@ -2155,6 +2155,10 @@ select[name="st"] option {
   align-items: center;
   gap: 8px;
 }
+.mstructs .est {
+  color: var(--faint);
+  font-size: 12px;
+}
 .mstructs .ico img {
   width: 24px;
   height: 24px;
