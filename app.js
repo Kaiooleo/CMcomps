@@ -478,9 +478,13 @@
       .join("");
     const nav = sub
       ? ""
-      : `<div class="nav2"><button class="btn primary" id="share" type="button">Share</button>${prev ? `<a class="btn" href="#cm-${esc(prev.id)}">← ${esc(prev.id)}</a>` : ""}<a class="btn" href="#cms">All PvP</a>${next ? `<a class="btn" href="#cm-${esc(next.id)}">${esc(next.id)} →</a>` : ""}</div>`;
+      : `<div class="nav2">${prev ? `<a class="btn" href="#cm-${esc(prev.id)}">← ${esc(prev.id)}</a>` : ""}<a class="btn" href="#cms">All PvP</a>${next ? `<a class="btn" href="#cm-${esc(next.id)}">${esc(next.id)} →</a>` : ""}</div>`;
+    const share = sub
+      ? ""
+      : `<button class="btn primary sharebtn" id="share" type="button" title="Make an image of this team to share"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>Share image</button>`;
     return `<section class="cmhead">
-    <div><div class="label">${esc(cm.sc)}${cm.nm ? " · " + esc(cm.nm) : ""}</div><h1><a class="cmid ${isLoh(cm.id) ? "loh" : ""}" href="#cm-${esc(cm.id)}">${esc(cm.id)}</a>${sub}</h1></div>
+    <div class="ttl"><div class="label">${esc(cm.sc)}${cm.nm ? " · " + esc(cm.nm) : ""}</div><h1><a class="cmid ${isLoh(cm.id) ? "loh" : ""}" href="#cm-${esc(cm.id)}">${esc(cm.id)}</a>${sub}</h1></div>
+    ${share}
     <div class="meta">${meta}</div>
     ${nav}
   </section>`;

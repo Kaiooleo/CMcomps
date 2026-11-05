@@ -749,10 +749,56 @@ a.btn {
   gap: 8px;
   flex-wrap: wrap;
 }
+.cmhead .ttl {
+  /* deixa só o botão de share na primeira linha, à direita do título */
+  flex: 1 1 calc(100% - 260px);
+}
+.sharebtn {
+  order: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 22px;
+  font-size: 16px;
+  font-weight: 700;
+  box-shadow: 0 6px 18px -6px var(--accent);
+  align-self: center;
+}
+.sharebtn svg {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.sharebtn:hover {
+  filter: brightness(1.08);
+}
+.cmhead .ttl + .sharebtn + .meta,
+.cmhead .ttl + .meta {
+  order: 2;
+  flex: 1 1 360px;
+}
 .nav2 {
+  order: 3;
   display: flex;
   gap: 8px;
   margin-left: auto;
+}
+.nav2 .btn {
+  padding: 5px 12px;
+  font-size: 13px;
+}
+@media (max-width: 600px) {
+  .cmhead .ttl {
+    flex-basis: 100%;
+  }
+  .sharebtn {
+    width: 100%;
+    justify-content: center;
+  }
 }
 .result {
   display: grid;
