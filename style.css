@@ -2416,6 +2416,14 @@ select[name="st"] option {
 .pvptabs {
   margin: 4px 0 0;
 }
+.sumtabs {
+  margin: 4px 0 0;
+  justify-self: start;
+}
+.chip.lohk {
+  background: color-mix(in oklab, var(--loh) 16%, transparent);
+  color: var(--loh);
+}
 
 /* ---------- tema pela Uma do logo ----------
    app.js põe --tc (a cor da Uma) no :root com data-tc; daqui sai a paleta:

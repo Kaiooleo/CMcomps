@@ -199,7 +199,8 @@
     const uma = /^uma-(.+)-([1-9])$/.exec(h);
     if (uma && CM_BY_ID.has(uma[1])) return viewUma(uma[1], uma[2] - 1);
     if (h === "cms") return viewList();
-    if (RANKINGS[h]) return viewRanking(h);
+    const rk = /^(rank-[a-z]+)(~loh)?$/.exec(h);
+    if (rk && RANKINGS[rk[1]]) return viewRanking(rk[1], rk[2] ? "loh" : "cm");
     return viewResumo();
   }
 
@@ -266,7 +267,17 @@
       key: "grandparents",
     },
     "rank-winners": { title: "Final Winners", key: "winners" },
+    "rank-titles": { title: "Character Titles", key: "titles" },
   };
+  /** Estatísticas de um tipo de PvP: "cm" ou "loh". */
+  const statsFor = (mode) =>
+    L.computeStats(
+      CAT.cms,
+      DATA,
+      (id) => counted(id) && isLoh(id) === (mode === "loh"),
+    );
+  /** Aba aberta no Resumo: começa no tipo do Current PvP. */
+  let sumTab = CONF.cur && isLoh(CONF.cur) ? "loh" : "cm";
 
   /** Vitórias (finais em 1st) por distância, com quantas finais foram registradas. */
   /** Barras de vitórias (finais em 1st): [[nome, { wins, finals }]], com quantas finais houve. */
@@ -290,11 +301,11 @@
     "Dirt Medium",
   ];
 
-  function panelHead(id, total) {
+  function panelHead(id, total, mode = "cm") {
     const r = RANKINGS[id];
     const more =
       total > TOP
-        ? `<a class="more" href="#${id}">See all (${total}) →</a>`
+        ? `<a class="more" href="#${id}${mode === "loh" ? "~loh" : ""}">See all (${total}) →</a>`
         : "";
     return `<div class="phead"><div class="label"${r.pink ? ' style="color:var(--pink)"' : ""}>${r.title}</div>${more}</div>`;
   }
@@ -308,17 +319,18 @@
       .join("")}</div>`;
   }
 
-  function viewRanking(id) {
+  function viewRanking(id, mode = "cm") {
     setNav("resumo");
+    sumTab = mode;
     const r = RANKINGS[id];
-    const list = L.computeStats(CAT.cms, DATA, counted)[r.key];
+    const list = statsFor(mode)[r.key];
     const body = !list.length
       ? '<p class="empty">Nothing recorded yet.</p>'
-      : ["aces", "parents", "grandparents", "winners"].includes(r.key)
+      : ["aces", "parents", "grandparents", "winners", "titles"].includes(r.key)
         ? aceGrid(list, 1)
         : podium(list, r.key === "borrow", true);
     $("#app").innerHTML = `
-  <section class="lhead"><h1${r.pink ? ' style="color:var(--pink)"' : ""}>${r.title}</h1><span class="chip">${list.length}</span></section>
+  <section class="lhead"><h1${r.pink ? ' style="color:var(--pink)"' : ""}>${r.title}</h1><span class="chip">${list.length}</span><span class="chip ${mode === "loh" ? "lohk" : ""}">${mode === "loh" ? "LoH" : "CM"}</span></section>
   <section class="panel">${body}</section>`;
   }
 
@@ -359,19 +371,60 @@
       (x) =>
         `<a href="#cm-${esc(x.id)}"><b>${esc(x.id)}</b>${x.rank ? `<span class="chip lr ${tierClass(x.rank)}">${esc(x.rank)}</span>` : ""}${x.ls != null ? `<span class="num">${n(x.ls)}</span>` : ""}${x.ex ? '<span class="chip exs">Extra Stage</span>' : ""}</a>`,
     ).join("")}</div>
-    ${s.titles.length ? `<div class="titles"><span class="label">Character titles</span>${s.titles.map(([k, c]) => `<span class="ti"><span class="av">${charImg(k, true)}</span>${esc(k)}${c > 1 ? ` ×${c}` : ""}</span>`).join("")}</div>` : ""}
   </section>`;
   }
 
-  function viewResumo() {
-    setNav("resumo");
-    const s = L.computeStats(CAT.cms, DATA, counted);
+  /** Barras de estilo (Ace ou vencedoras). */
+  function styleBars(map) {
+    const max = Math.max(1, ...Object.values(map));
+    return `<div class="bars">${STYLES.map((st) => {
+      const n = map[st] || 0;
+      return `<div class="bar ${stClass(st)}"><span>${st}</span><span class="t"><i style="width:${(n / max) * 100}%"></i></span><b class="num">${n}</b></div>`;
+    }).join("")}</div>`;
+  }
+
+  /** Rankings comuns às duas abas: Umas, estilo, cartas, emprestadas, pais e avós. */
+  function sharedRankings(s, mode) {
+    const none = '<p class="empty">Nothing recorded yet.</p>';
+    return `<section class="row2">
+    <div class="panel">${panelHead("rank-aces", s.aces.length, mode)}
+      ${s.aces.length ? aceGrid(s.aces.slice(0, TOP)) : none}
+    </div>
+    <div class="panel"><div class="label">Style (Ace)</div>${styleBars(s.styles)}</div>
+  </section>
+  ${mode === "cm" ? cmWinnersHtml(s) : lohTitlesHtml(s)}
+  ${mode === "cm" ? `<section class="panel"><div class="label">Wins by scenario</div>${winBars(s.byScenario.map((r) => [r.sc, r]))}</section>` : ""}
+  <section class="panel">${panelHead("rank-cards", s.cards.length, mode)}${podium(s.cards.slice(0, TOP), false)}</section>
+  <section class="panel">${panelHead("rank-borrowed", s.borrow.length, mode)}${podium(s.borrow.slice(0, TOP), true)}</section>
+  <section class="row2 even">
+    <div class="panel">${panelHead("rank-parents", s.parents.length, mode)}
+      ${s.parents.length ? aceGrid(s.parents.slice(0, TOP)) : none}
+    </div>
+    <div class="panel">${panelHead("rank-grandparents", s.grandparents.length, mode)}
+      ${s.grandparents.length ? aceGrid(s.grandparents.slice(0, TOP)) : none}
+    </div>
+  </section>`;
+  }
+
+  function cmWinnersHtml(s) {
+    return `<section class="row2">
+    <div class="panel">${panelHead("rank-winners", s.winners.length)}
+      ${s.winners.length ? aceGrid(s.winners.slice(0, TOP)) : `<p class="empty">${s.pl["1st"] ? "Mark which Uma won the final on your 1st place PvPs." : "Nothing recorded yet."}</p>`}
+      ${s.winners.length && s.winsTagged < s.pl["1st"] ? `<p class="note">${s.winsTagged} of ${s.pl["1st"]} wins with the winning Uma marked.</p>` : ""}
+    </div>
+    <div class="panel"><div class="label">Winning style</div>${styleBars(s.winStyles)}</div>
+  </section>`;
+  }
+
+  function lohTitlesHtml(s) {
+    return `<section class="panel">${panelHead("rank-titles", s.titles.length, "loh")}
+      ${s.titles.length ? aceGrid(s.titles.slice(0, TOP)) : '<p class="empty">Pick the Uma that got the character title on each LoH.</p>'}
+    </section>`;
+  }
+
+  function cmTabHtml(s) {
     const empty = s.tot === 0 && !s.aces.length && !s.scores.length;
-    const styleMax = Math.max(1, ...Object.values(s.styles));
-    const winMax = Math.max(1, ...Object.values(s.winStyles));
-    $("#app").innerHTML = `
-  ${currentHero()}
-  ${empty ? `<div class="banner"><p>No results recorded yet. Open a PvP, build your team and set your placement to see stats here.</p><a class="btn primary" href="#cms">See PvPs</a></div>` : ""}
+    return `${empty ? `<div class="banner"><p>No CM results recorded yet. Open a CM, build your team and set your placement to see stats here.</p><a class="btn primary" href="#cms">See PvPs</a></div>` : ""}
   <section class="hero">
     <div class="panel perf">
       <div class="label">Placed · Win rate</div>
@@ -387,43 +440,32 @@
       ${winBars(DIST_KEYS.map((k) => [k, s.byDist[k]]))}
     </div>
   </section>
-  <section class="row2">
-    <div class="panel">${panelHead("rank-aces", s.aces.length)}
-      ${s.aces.length ? aceGrid(s.aces.slice(0, TOP)) : '<p class="empty">Nothing recorded yet.</p>'}
-    </div>
-    <div class="panel"><div class="label">Style (Ace)</div>
-      <div class="bars">${STYLES.map((st) => {
-        const n = s.styles[st] || 0;
-        return `<div class="bar ${stClass(st)}"><span>${st}</span><span class="t"><i style="width:${(n / styleMax) * 100}%"></i></span><b class="num">${n}</b></div>`;
-      }).join("")}</div>
-    </div>
-  </section>
-  ${lohSummaryHtml(s)}
-  <section class="row2">
-    <div class="panel">${panelHead("rank-winners", s.winners.length)}
-      ${s.winners.length ? aceGrid(s.winners.slice(0, TOP)) : `<p class="empty">${s.pl["1st"] ? "Mark which Uma won the final on your 1st place PvPs." : "Nothing recorded yet."}</p>`}
-      ${s.winners.length && s.winsTagged < s.pl["1st"] ? `<p class="note">${s.winsTagged} of ${s.pl["1st"]} wins with the winning Uma marked.</p>` : ""}
-    </div>
-    <div class="panel"><div class="label">Winning style</div>
-      <div class="bars">${STYLES.map((st) => {
-        const n = s.winStyles[st] || 0;
-        return `<div class="bar ${stClass(st)}"><span>${st}</span><span class="t"><i style="width:${(n / winMax) * 100}%"></i></span><b class="num">${n}</b></div>`;
-      }).join("")}</div>
-    </div>
-  </section>
-  <section class="panel"><div class="label">Wins by scenario</div>
-    ${winBars(s.byScenario.map((r) => [r.sc, r]))}
-  </section>
-  <section class="panel">${panelHead("rank-cards", s.cards.length)}${podium(s.cards.slice(0, TOP), false)}</section>
-  <section class="panel">${panelHead("rank-borrowed", s.borrow.length)}${podium(s.borrow.slice(0, TOP), true)}</section>
-  <section class="row2 even">
-    <div class="panel">${panelHead("rank-parents", s.parents.length)}
-      ${s.parents.length ? aceGrid(s.parents.slice(0, TOP)) : '<p class="empty">Nothing recorded yet.</p>'}
-    </div>
-    <div class="panel">${panelHead("rank-grandparents", s.grandparents.length)}
-      ${s.grandparents.length ? aceGrid(s.grandparents.slice(0, TOP)) : '<p class="empty">Nothing recorded yet.</p>'}
-    </div>
-  </section>`;
+  ${sharedRankings(s, "cm")}`;
+  }
+
+  function lohTabHtml(s) {
+    const empty = !s.loh.length && !s.aces.length;
+    if (empty)
+      return `<div class="banner"><p>No LoH recorded yet. Open a League of Heroes, build your team and enter your League Score to see stats here.</p><a class="btn primary" href="#cms">See PvPs</a></div>
+  ${sharedRankings(s, "loh")}`;
+    return `${lohSummaryHtml(s)}
+  ${sharedRankings(s, "loh")}`;
+  }
+
+  function viewResumo() {
+    setNav("resumo");
+    const s = statsFor(sumTab);
+    const tabs = `<nav class="seg sumtabs" aria-label="Summary sections"><button type="button" class="tog" data-sum="cm" aria-pressed="${sumTab === "cm"}">Champions Meeting</button><button type="button" class="tog" data-sum="loh" aria-pressed="${sumTab === "loh"}">League of Heroes</button></nav>`;
+    $("#app").innerHTML = `
+  ${currentHero()}
+  ${tabs}
+  ${sumTab === "loh" ? lohTabHtml(s) : cmTabHtml(s)}`;
+    document.querySelectorAll("[data-sum]").forEach((b) =>
+      b.addEventListener("click", () => {
+        sumTab = b.dataset.sum;
+        viewResumo();
+      }),
+    );
   }
 
   /* ---------- lista de PvPs ---------- */
