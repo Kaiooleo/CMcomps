@@ -129,6 +129,22 @@
     return now > new Date(deadline + "T23:59:59");
   }
 
+  /** A data do calendário é o fim do evento; a final é o dia anterior. */
+  const FINAL_BEFORE_END = 1;
+
+  /**
+   * O PvP já entra nas estatísticas? Conta a partir do dia seguinte à final
+   * (a final é FINAL_BEFORE_END dia antes do fim do evento em `conf.date`).
+   * O Current PvP, por outro lado, só troca depois do fim do evento (finalPassed).
+   */
+  function statsOpen(conf, now = new Date()) {
+    if (!conf || !validDate(conf.date)) return false;
+    return finalPassed(
+      { date: addDays(conf.date, -FINAL_BEFORE_END), est: conf.est },
+      now,
+    );
+  }
+
   /**
    * Calendário completo das finais: usa as datas de `sched` (oficiais ou
    * estimadas) e, para os PvPs seguintes sem data, estima a partir da
@@ -187,10 +203,13 @@
     return i === cur ? "current" : "future";
   }
 
-  /** Entra nas estatísticas? Anteriores sempre; o atual só depois da final; os seguintes nunca. */
+  /**
+   * Entra nas estatísticas? Anteriores sempre; o atual a partir do dia seguinte
+   * à final (mesmo que o evento ainda não tenha terminado); os seguintes nunca.
+   */
   function counted(cms, conf, id, now = new Date()) {
     const ph = phase(cms, conf, id);
-    return ph === "past" || (ph === "current" && finalPassed(conf, now));
+    return ph === "past" || (ph === "current" && statsOpen(conf, now));
   }
 
   /** Dias até o fim do dia da final (0 = hoje). `null` sem data válida. */
@@ -574,6 +593,8 @@
     EXTRA_MIN_RACES,
     validDate,
     finalPassed,
+    statsOpen,
+    FINAL_BEFORE_END,
     phase,
     counted,
     daysToFinal,

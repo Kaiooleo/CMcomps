@@ -70,8 +70,8 @@ test("sem Current CM, todos os PvPs contam", () => {
 
 test("Current CM: anteriores contam, ele só depois da final, seguintes nunca", () => {
   const conf = { cur: "CM2", date: "2026-11-06" };
-  const before = day("2026-11-06");
-  const after = day("2026-11-07");
+  const before = day("2026-11-05");
+  const after = day("2026-11-06");
   assert.equal(L.phase(CMS, conf, "CM1"), "past");
   assert.equal(L.phase(CMS, conf, "CM2"), "current");
   assert.equal(L.phase(CMS, conf, "LOH1"), "future");
@@ -518,4 +518,23 @@ test("estrutura de deck estimada pelo uso das cartas soma 6", () => {
     L.estimateStruct([], () => null),
     [],
   );
+});
+
+test("estatísticas contam no dia seguinte à final; Current só troca após o fim do evento", () => {
+  // fim do evento 2026-11-06 → final 2026-11-05
+  const conf = { cur: "CM2", date: "2026-11-06" };
+  assert.ok(!L.counted(CMS, conf, "CM2", day("2026-11-05")), "dia da final");
+  assert.ok(
+    L.counted(CMS, conf, "CM2", day("2026-11-06")),
+    "dia seguinte à final",
+  );
+  assert.ok(
+    !L.finalPassed(conf, day("2026-11-06")),
+    "evento ainda não terminou",
+  );
+  assert.ok(L.finalPassed(conf, day("2026-11-07")));
+  // final estimada: 3 dias de folga contados da final
+  const est = { cur: "CM2", date: "2026-11-06", est: true };
+  assert.ok(!L.statsOpen(est, day("2026-11-08")));
+  assert.ok(L.statsOpen(est, day("2026-11-09")));
 });

@@ -92,7 +92,7 @@
   /* ---------- Current PvP (definido em data.js) ---------- */
   const phase = (id) => L.phase(CAT.cms, CONF, id);
   const counted = (id) => L.counted(CAT.cms, CONF, id);
-  const finalPassed = () => L.finalPassed(CONF);
+  const statsOpen = () => L.statsOpen(CONF); // dia seguinte à final
 
   /* ---------- dados do usuário ---------- */
   let DATA = {};
@@ -208,7 +208,7 @@
     const cm = CONF.cur && CM_BY_ID.get(CONF.cur);
     if (!cm) return "";
     const d = DATA[cm.id];
-    const passed = finalPassed();
+    const passed = statsOpen();
     const days = L.daysToFinal({ date: FINAL_DAY });
     const when = passed
       ? `Final on ${finalLabel()} · done`
@@ -457,7 +457,7 @@
 
   function currentNote(id) {
     if (phase(id) !== "current") return "";
-    return `<div class="banner sched"><p><b>Current PvP.</b> ${finalPassed() ? "This PvP is over and it now counts in the stats." : `It counts in the stats once this PvP ends${CONF.date ? ` on ${fmtDate(CONF.date)}` : ""}${CONF.est ? ` (estimated date, plus ${L.MARGIN_DAYS} days of margin)` : ""}.`}</p></div>`;
+    return `<div class="banner sched"><p><b>Current PvP.</b> ${statsOpen() ? "The final is over and this PvP now counts in the stats." : `It counts in the stats from the day after the final${FINAL_DAY ? ` (${fmtDate(FINAL_DAY)})` : ""}${CONF.est ? ` (estimated date, plus ${L.MARGIN_DAYS} days of margin)` : ""}.`}</p></div>`;
   }
 
   function pvpHead(cm, sub = "") {
