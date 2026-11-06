@@ -1452,6 +1452,25 @@
     SH.place["B 1st"] = SH.accent;
   }
 
+  /** Etiqueta "WINNER"/"TITLE" centrada em (cx, cy), sobre a arte da Uma. */
+  function starPill(ctx, text, cx, cy, color, size = 15) {
+    ctx.font = SH.font(800, size);
+    const w = ctx.measureText(text).width + size * 1.6;
+    const h = size * 1.9;
+    rrect(ctx, cx - w / 2, cy - h / 2, w, h, h / 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = SH.panel;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.fillStyle = "#0b0f14";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, cx, cy + 1);
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
+  }
+
   async function renderShare(id) {
     themeShare();
     const cm = CM_BY_ID.get(id);
@@ -1545,14 +1564,25 @@
     const cw = (W - 2 * P - 2 * gap) / 3;
     const cy = 216;
     const chh = 530;
+    // destaque: Uma que venceu a final (CM) ou que ganhou o título (LoH)
+    const star = isLoh(id)
+      ? d.ti && d.team.find((t) => t.n === d.ti)
+      : L.finalWinner(d, id);
+    const starColor = isLoh(id) ? SH.tier.Platinum : SH.place["1st"];
+    const starLabel = isLoh(id) ? "TITLE" : "WINNER";
     for (let k = 0; k < 3; k++) {
       const t = d.team[k];
       const x = P + k * (cw + gap);
+      const isStar = star && star === t;
       rrect(ctx, x, cy, cw, chh, 22);
       ctx.fillStyle = SH.panel;
       ctx.fill();
-      ctx.strokeStyle = t.ro === "Debuffer" ? SH.loh + "aa" : SH.line;
-      ctx.lineWidth = t.ro === "Debuffer" ? 2 : 1;
+      ctx.strokeStyle = isStar
+        ? starColor
+        : t.ro === "Debuffer"
+          ? SH.loh + "aa"
+          : SH.line;
+      ctx.lineWidth = isStar ? 4 : t.ro === "Debuffer" ? 2 : 1;
       ctx.stroke();
       const ix = x + 22;
       if (!t.n) {
@@ -1567,6 +1597,7 @@
       ctx.fillStyle = SH.panel2;
       ctx.fill();
       await drawArt(ctx, c && (c.s || c.i), ix, cy + 22, 150, 150, 16, true);
+      if (isStar) starPill(ctx, starLabel, ix + 75, cy + 164, starColor);
       const tx = ix + 168;
       const tw = cw - 44 - 168;
       ctx.fillStyle = SH.fg;
@@ -1718,6 +1749,13 @@
         ctx.fillStyle = SH.panel2;
         ctx.fill();
         await drawArt(ctx, c && (c.s || c.i), ex, ey, 64, 64, 14, true);
+        if (star && star === t) {
+          rrect(ctx, ex, ey, 64, 64, 14);
+          ctx.strokeStyle = starColor;
+          ctx.lineWidth = 3;
+          ctx.stroke();
+          starPill(ctx, starLabel, ex + 32, ey + 64, starColor, 11);
+        }
         if (t.ro === "Debuffer") {
           rrect(ctx, ex, ey, 64, 64, 14);
           ctx.strokeStyle = SH.loh;
