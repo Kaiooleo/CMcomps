@@ -530,7 +530,7 @@
             `<span class="m ${j === borrowedAt ? "borrow" : ""} ${x ? "" : "off"}">${x ? img(x) : ""}</span>`,
         )
         .join("");
-    const won = L.finalWinner(DATA[cmId]) === t;
+    const won = L.finalWinner(DATA[cmId], cmId) === t;
     return `<a class="panel umacard ${t.ro === "Debuffer" ? "debuff" : ""} ${won ? "won" : ""}" href="${href}" title="Open ${esc(t.n)}">
     <span class="art">${charImg(t.n, true)}${won ? '<span class="crown" title="Won the final">🏆</span>' : ""}</span>
     <span class="info">
@@ -546,12 +546,12 @@
   }
 
   /** Com 1st marcado: escolher qual Uma do time venceu a final. */
-  function winnerPicker(d) {
-    if (d.pl !== "1st") return "";
+  function winnerPicker(d, id) {
+    if (d.pl !== "1st" || isLoh(id)) return "";
     const team = d.team.filter((t) => t.n);
     if (!team.length)
       return '<p class="wonby-hint">Build your team to pick the Uma that won the final.</p>';
-    const cur = L.finalWinner(d);
+    const cur = L.finalWinner(d, id);
     return `<div class="wonby"><div class="label">Won by</div>
       <div class="wonpick" role="group" aria-label="Uma that won the final">${team
         .map(
@@ -705,7 +705,7 @@
   <section class="result">
     <div class="panel"><div class="label">Final</div>
       <div class="places" role="group" aria-label="Final">${[...PLACES, ""].map((p) => `<button type="button" class="p-${p ? p.replace(" ", "") : "none"}" data-pl="${p}" aria-pressed="${d.pl === p}">${p || "No result"}</button>`).join("")}</div>
-      ${winnerPicker(d)}
+      ${winnerPicker(d, id)}
     </div>
     <div class="panel"><div class="label">Rounds</div>
       <div class="rounds">${d.rat

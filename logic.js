@@ -238,7 +238,7 @@
     for (const cm of cms) {
       const d = data[cm.id];
       if (!d || !isCounted(cm.id)) continue;
-      const fw = finalWinner(d);
+      const fw = finalWinner(d, cm.id);
       if (fw) {
         winners[fw.n] = (winners[fw.n] || 0) + 1;
         if (fw.st) winStyles[fw.st] = (winStyles[fw.st] || 0) + 1;
@@ -457,11 +457,13 @@
   }
 
   /**
-   * Uma que venceu a final: só vale com 1st marcado e se ela ainda está no time.
+   * Uma que venceu a final: só em CM (não LoH), com 1st marcado e se ela ainda
+   * está no time.
    * Devolve a Uma do time (objeto) ou null.
    */
-  function finalWinner(d) {
+  function finalWinner(d, id) {
     if (!d || d.pl !== "1st" || !d.fw) return null;
+    if (id && id.startsWith("LOH")) return null; // só CM tem final com vencedora
     return (d.team || []).find((t) => t.n === d.fw) || null;
   }
 

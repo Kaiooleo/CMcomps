@@ -552,4 +552,7 @@ test("Uma que venceu a final: só com 1st e se estiver no time; entra no Summary
   assert.deepEqual(s.winners, [["A", 1]]);
   assert.equal(s.winStyles["Front Runner"], 1);
   assert.equal(s.winsTagged, 1);
+  assert.equal(L.finalWinner(r, "LOH3"), null, "LoH não tem vencedora");
+  const s2 = L.computeStats([{ id: "LOH3" }], { LOH3: r });
+  assert.deepEqual(s2.winners, []);
 });
