@@ -251,6 +251,7 @@
       title: "Most Used Grandparents",
       key: "grandparents",
     },
+    "rank-winners": { title: "Final Winners", key: "winners" },
   };
 
   /** Vitórias (finais em 1st) por distância, com quantas finais foram registradas. */
@@ -299,7 +300,7 @@
     const list = L.computeStats(CAT.cms, DATA, counted)[r.key];
     const body = !list.length
       ? '<p class="empty">Nothing recorded yet.</p>'
-      : ["aces", "parents", "grandparents"].includes(r.key)
+      : ["aces", "parents", "grandparents", "winners"].includes(r.key)
         ? aceGrid(list, 1)
         : podium(list, r.key === "borrow", true);
     $("#app").innerHTML = `
@@ -322,6 +323,7 @@
     const s = L.computeStats(CAT.cms, DATA, counted);
     const empty = s.tot === 0 && !s.aces.length && !s.scores.length;
     const styleMax = Math.max(1, ...Object.values(s.styles));
+    const winMax = Math.max(1, ...Object.values(s.winStyles));
     $("#app").innerHTML = `
   ${currentHero()}
   ${empty ? `<div class="banner"><p>No results recorded yet. Open a PvP, build your team and set your placement to see stats here.</p><a class="btn primary" href="#cms">See PvPs</a></div>` : ""}
@@ -348,6 +350,18 @@
       <div class="bars">${STYLES.map((st) => {
         const n = s.styles[st] || 0;
         return `<div class="bar ${stClass(st)}"><span>${st}</span><span class="t"><i style="width:${(n / styleMax) * 100}%"></i></span><b class="num">${n}</b></div>`;
+      }).join("")}</div>
+    </div>
+  </section>
+  <section class="row2">
+    <div class="panel">${panelHead("rank-winners", s.winners.length)}
+      ${s.winners.length ? aceGrid(s.winners.slice(0, TOP)) : `<p class="empty">${s.pl["1st"] ? "Mark which Uma won the final on your 1st place PvPs." : "Nothing recorded yet."}</p>`}
+      ${s.winners.length && s.winsTagged < s.pl["1st"] ? `<p class="note">${s.winsTagged} of ${s.pl["1st"]} wins with the winning Uma marked.</p>` : ""}
+    </div>
+    <div class="panel"><div class="label">Winning style</div>
+      <div class="bars">${STYLES.map((st) => {
+        const n = s.winStyles[st] || 0;
+        return `<div class="bar ${stClass(st)}"><span>${st}</span><span class="t"><i style="width:${(n / winMax) * 100}%"></i></span><b class="num">${n}</b></div>`;
       }).join("")}</div>
     </div>
   </section>
@@ -516,8 +530,9 @@
             `<span class="m ${j === borrowedAt ? "borrow" : ""} ${x ? "" : "off"}">${x ? img(x) : ""}</span>`,
         )
         .join("");
-    return `<a class="panel umacard ${t.ro === "Debuffer" ? "debuff" : ""}" href="${href}" title="Open ${esc(t.n)}">
-    <span class="art">${charImg(t.n, true)}</span>
+    const won = L.finalWinner(DATA[cmId]) === t;
+    return `<a class="panel umacard ${t.ro === "Debuffer" ? "debuff" : ""} ${won ? "won" : ""}" href="${href}" title="Open ${esc(t.n)}">
+    <span class="art">${charImg(t.n, true)}${won ? '<span class="crown" title="Won the final">🏆</span>' : ""}</span>
     <span class="info">
       <b class="nm">${esc(t.n)}</b>
       <span class="tags"><span class="chip ${t.ro === "Debuffer" ? "deb" : "ace"}">${esc(t.ro)}</span>${t.st ? `<span class="chip ${stClass(t.st)}">${esc(t.st)}</span>` : ""}</span>
@@ -528,6 +543,22 @@
       <span class="label">Deck</span><span class="mrow deckrow">${mini(t.d, cardImg, L.BORROWED_SLOT)}</span>
     </span>
   </a>`;
+  }
+
+  /** Com 1st marcado: escolher qual Uma do time venceu a final. */
+  function winnerPicker(d) {
+    if (d.pl !== "1st") return "";
+    const team = d.team.filter((t) => t.n);
+    if (!team.length)
+      return '<p class="wonby-hint">Build your team to pick the Uma that won the final.</p>';
+    const cur = L.finalWinner(d);
+    return `<div class="wonby"><div class="label">Won by</div>
+      <div class="wonpick" role="group" aria-label="Uma that won the final">${team
+        .map(
+          (t) =>
+            `<button type="button" data-fw="${esc(t.n)}" aria-pressed="${cur === t}" title="${esc(t.n)}"><span class="av">${charImg(t.n, true)}</span><span class="nm">${esc(t.n)}</span></button>`,
+        )
+        .join("")}</div></div>`;
   }
 
   /** Umas trocadas durante o PvP: cards menores, abaixo das 3 principais. */
@@ -674,6 +705,7 @@
   <section class="result">
     <div class="panel"><div class="label">Final</div>
       <div class="places" role="group" aria-label="Final">${[...PLACES, ""].map((p) => `<button type="button" class="p-${p ? p.replace(" ", "") : "none"}" data-pl="${p}" aria-pressed="${d.pl === p}">${p || "No result"}</button>`).join("")}</div>
+      ${winnerPicker(d)}
     </div>
     <div class="panel"><div class="label">Rounds</div>
       <div class="rounds">${d.rat
@@ -713,6 +745,14 @@
     document.querySelectorAll("[data-pl]").forEach((b) =>
       b.addEventListener("click", () => {
         d.pl = b.dataset.pl;
+        save();
+        viewCM(id);
+      }),
+    );
+    document.querySelectorAll("[data-fw]").forEach((b) =>
+      b.addEventListener("click", () => {
+        // clicar de novo na mesma Uma desmarca
+        d.fw = d.fw === b.dataset.fw ? null : b.dataset.fw;
         save();
         viewCM(id);
       }),

@@ -538,3 +538,18 @@ test("estatísticas contam no dia seguinte à final; Current só troca após o f
   assert.ok(!L.statsOpen(est, day("2026-11-08")));
   assert.ok(L.statsOpen(est, day("2026-11-09")));
 });
+
+test("Uma que venceu a final: só com 1st e se estiver no time; entra no Summary", () => {
+  const r = L.normalizeRecord({
+    team: [{ n: "A", st: "Front Runner" }, { n: "B" }, { n: "C" }],
+    pl: "1st",
+    fw: "A",
+  });
+  assert.equal(L.finalWinner(r).n, "A");
+  assert.equal(L.finalWinner({ ...r, pl: "2nd" }), null);
+  assert.equal(L.finalWinner({ ...r, fw: "Z" }), null);
+  const s = L.computeStats([{ id: "CM1" }], { CM1: r });
+  assert.deepEqual(s.winners, [["A", 1]]);
+  assert.equal(s.winStyles["Front Runner"], 1);
+  assert.equal(s.winsTagged, 1);
+});

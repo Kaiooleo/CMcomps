@@ -233,9 +233,16 @@
     const byScenario = []; // [{ sc, wins: 1st, finals }] na ordem dos PvPs
     const parents = {}; // P1 e P2 usados (todas as Umas)
     const grandparents = {}; // avós usados (todas as Umas)
+    const winners = {}; // Uma que venceu a final → quantas finais
+    const winStyles = {}; // estilo da Uma que venceu a final → quantas
     for (const cm of cms) {
       const d = data[cm.id];
       if (!d || !isCounted(cm.id)) continue;
+      const fw = finalWinner(d);
+      if (fw) {
+        winners[fw.n] = (winners[fw.n] || 0) + 1;
+        if (fw.st) winStyles[fw.st] = (winStyles[fw.st] || 0) + 1;
+      }
       if (pl[d.pl] !== undefined) pl[d.pl]++;
       if (pl[d.pl] !== undefined) {
         const dd = dist(cm.m) || cm.dc;
@@ -290,6 +297,9 @@
       borrow: top(borrow, Infinity),
       parents: top(parents, Infinity),
       grandparents: top(grandparents, Infinity),
+      winners: top(winners, Infinity),
+      winStyles,
+      winsTagged: Object.values(winners).reduce((a, b) => a + b, 0),
       byDist,
       byScenario,
       scores,
@@ -352,6 +362,7 @@
       team: Array.from({ length: TEAM_SIZE }, blankUma),
       rat: Array(ROUNDS).fill(""),
       pl: "",
+      fw: null, // Uma que venceu a final (nome), quando pl é "1st"
     };
   }
 
@@ -373,6 +384,7 @@
     const base = blankRecord();
     if (!r || typeof r !== "object") return base;
     base.pl = PLACES.includes(r.pl) ? r.pl : "";
+    base.fw = str(r.fw);
     base.rat = fit(r.rat, ROUNDS, "", (v) => String(v));
     const src = Array.isArray(r.team) ? r.team.slice(0, MAX_TEAM) : [];
     const team = Array.from(
@@ -441,7 +453,16 @@
 
   /** PvP sem nada preenchido? (não precisa ser salvo) */
   function isEmptyRecord(r) {
-    return !r.pl && r.rat.every((x) => !x) && r.team.every(isEmptyUma);
+    return !r.pl && !r.fw && r.rat.every((x) => !x) && r.team.every(isEmptyUma);
+  }
+
+  /**
+   * Uma que venceu a final: só vale com 1st marcado e se ela ainda está no time.
+   * Devolve a Uma do time (objeto) ou null.
+   */
+  function finalWinner(d) {
+    if (!d || d.pl !== "1st" || !d.fw) return null;
+    return (d.team || []).find((t) => t.n === d.fw) || null;
   }
 
   /** Corridas de uma Uma: as que foram anotadas nela ou, sem isso, as do PvP inteiro. */
@@ -583,6 +604,7 @@
     roundTotals,
     ratingScore,
     winsTotal,
+    finalWinner,
     estimateStruct,
     umaRaces,
     countsInStats,

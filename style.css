@@ -841,6 +841,72 @@ a.btn {
 .places button[aria-pressed="true"].p-none {
   background: var(--surface-2);
 }
+/* Uma que venceu a final (aparece com 1st marcado) */
+.wonby {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.wonpick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.wonpick button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 4px 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  font-weight: 600;
+  font-size: 13px;
+  max-width: 100%;
+}
+.wonpick .av {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex: none;
+  background: var(--surface-2);
+}
+.wonpick .av > * {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+.wonpick .nm {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wonpick button[aria-pressed="true"] {
+  background: var(--gold);
+  color: #fff;
+  border-color: transparent;
+}
+.wonby-hint,
+.panel .note {
+  margin-top: 10px;
+  color: var(--faint);
+  font-size: 12.5px;
+}
+.umacard .art {
+  position: relative;
+}
+.umacard .crown {
+  position: absolute;
+  right: 4px;
+  top: 3px;
+  font-size: 18px;
+  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.35));
+}
+.umacard.won {
+  border-color: var(--gold);
+}
 .rats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
