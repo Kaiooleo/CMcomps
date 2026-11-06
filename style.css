@@ -343,6 +343,27 @@ a.btn {
   background: var(--b1);
   color: #fff;
 }
+/* ranks do LoH */
+.chip.t-bronze {
+  background: var(--bronze);
+  color: #fff;
+}
+.chip.t-silver {
+  background: var(--silver);
+  color: #fff;
+}
+.chip.t-gold {
+  background: var(--gold);
+  color: #fff;
+}
+.chip.t-platinum {
+  background: linear-gradient(135deg, #5cc8bd, #8fa8e8);
+  color: #fff;
+}
+.chip.exs {
+  background: color-mix(in oklab, var(--loh) 16%, transparent);
+  color: var(--loh);
+}
 .cmid {
   font-family: var(--f-display);
   font-weight: 800;
@@ -841,6 +862,138 @@ a.btn {
 .places button[aria-pressed="true"].p-none {
   background: var(--surface-2);
 }
+/* resultado do LoH */
+.result.loh .lohrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 16px;
+  margin-top: 8px;
+}
+.lsbox,
+.rcbox {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.lsbox input,
+.rcbox input {
+  width: 170px;
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+}
+.rankbox {
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+}
+.rankbox .chip {
+  font-size: 15px;
+  padding: 5px 14px;
+}
+.rankbox small,
+.result.loh .hint {
+  color: var(--faint);
+  font-size: 12px;
+}
+.result.loh .hint {
+  margin: 6px 0 4px;
+}
+.extog {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 7px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  font-weight: 700;
+}
+.extog small {
+  color: var(--faint);
+  font-weight: 500;
+}
+.extog .dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+}
+.extog[aria-pressed="true"] {
+  border-color: var(--loh);
+  color: var(--loh);
+}
+.extog[aria-pressed="true"] .dot {
+  background: var(--loh);
+  border-color: var(--loh);
+}
+/* LoH no Resumo */
+.lohsum .facts {
+  grid-template-columns: repeat(4, 1fr);
+  margin-top: 10px;
+}
+.lohsum .facts small {
+  color: var(--faint);
+  font-size: 12px;
+}
+.lohsum .facts .chip {
+  font-size: 13px;
+}
+.lohlist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.lohlist a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--fg);
+  font-size: 13px;
+}
+.lohlist .num {
+  color: var(--muted);
+}
+.lohsum .titles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  font-size: 13px;
+}
+.lohsum .ti {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.lohsum .ti .av {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.lohsum .ti .av > * {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+@media (max-width: 600px) {
+  .lohsum .facts {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 /* Uma que venceu a final (aparece com 1st marcado) */
 .wonby {
   margin-top: 14px;

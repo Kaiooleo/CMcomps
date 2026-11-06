@@ -235,16 +235,31 @@
     const grandparents = {}; // avós usados (todas as Umas)
     const winners = {}; // Uma que venceu a final → quantas finais
     const winStyles = {}; // estilo da Uma que venceu a final → quantas
+    const loh = []; // [{ id, ls, rank, ex, wr }] dos LoHs com algo registrado
+    const titles = {}; // Uma que recebeu o título no LoH → quantas vezes
     for (const cm of cms) {
       const d = data[cm.id];
       if (!d || !isCounted(cm.id)) continue;
+      const isLoh = isLohId(cm.id);
+      if (isLoh) {
+        if (d.ls != null || d.rc || d.ex)
+          loh.push({
+            id: cm.id,
+            ls: d.ls,
+            rank: lohRank(d.ls),
+            ex: d.ex,
+            wr: d.rc ? lohWr(d) : null,
+          });
+        const ti = d.ti && (d.team || []).find((t) => t.n === d.ti);
+        if (ti) titles[ti.n] = (titles[ti.n] || 0) + 1;
+      }
       const fw = finalWinner(d, cm.id);
       if (fw) {
         winners[fw.n] = (winners[fw.n] || 0) + 1;
         if (fw.st) winStyles[fw.st] = (winStyles[fw.st] || 0) + 1;
       }
-      if (pl[d.pl] !== undefined) pl[d.pl]++;
-      if (pl[d.pl] !== undefined) {
+      if (!isLoh && pl[d.pl] !== undefined) pl[d.pl]++;
+      if (!isLoh && pl[d.pl] !== undefined) {
         const dd = dist(cm.m) || cm.dc;
         const dk = dd && `${cm.su === "Dirt" ? "Dirt" : "Turf"} ${dd}`;
         if (dk) {
@@ -259,7 +274,7 @@
           if (d.pl === "1st") row.wins++;
         }
       }
-      const sc = ratingScore(d.rat);
+      const sc = isLoh ? 0 : ratingScore(d.rat);
       if (sc > 0) {
         scores.push({ id: cm.id, sc, pl: d.pl });
       }
@@ -300,6 +315,8 @@
       winners: top(winners, Infinity),
       winStyles,
       winsTagged: Object.values(winners).reduce((a, b) => a + b, 0),
+      loh,
+      titles: top(titles, Infinity),
       byDist,
       byScenario,
       scores,
@@ -363,6 +380,11 @@
       rat: Array(ROUNDS).fill(""),
       pl: "",
       fw: null, // Uma que venceu a final (nome), quando pl é "1st"
+      // só LoH:
+      ls: null, // League Score final
+      rc: null, // corridas no Main Stage
+      ex: false, // entrou no Extra Stage (top 96)
+      ti: null, // Uma que recebeu o título de personagem
     };
   }
 
@@ -385,6 +407,12 @@
     if (!r || typeof r !== "object") return base;
     base.pl = PLACES.includes(r.pl) ? r.pl : "";
     base.fw = str(r.fw);
+    const ls = parseInt(r.ls, 10);
+    base.ls = ls >= 0 ? ls : null;
+    const rc = parseInt(r.rc, 10);
+    base.rc = rc > 0 ? rc : null;
+    base.ex = r.ex === true;
+    base.ti = str(r.ti);
     base.rat = fit(r.rat, ROUNDS, "", (v) => String(v));
     const src = Array.isArray(r.team) ? r.team.slice(0, MAX_TEAM) : [];
     const team = Array.from(
@@ -453,7 +481,66 @@
 
   /** PvP sem nada preenchido? (não precisa ser salvo) */
   function isEmptyRecord(r) {
-    return !r.pl && !r.fw && r.rat.every((x) => !x) && r.team.every(isEmptyUma);
+    return (
+      !r.pl &&
+      !r.fw &&
+      r.ls == null &&
+      r.rc == null &&
+      !r.ex &&
+      !r.ti &&
+      r.rat.every((x) => !x) &&
+      r.team.every(isEmptyUma)
+    );
+  }
+
+  /* ---------- League of Heroes ---------- */
+
+  const isLohId = (id) => typeof id === "string" && id.startsWith("LOH");
+
+  /** Ranks do LoH e o League Score mínimo de cada um (GameTora). */
+  const LOH_RANKS = [
+    ["Bronze I", 0],
+    ["Bronze II", 1000],
+    ["Bronze III", 2000],
+    ["Bronze IV", 3000],
+    ["Silver I", 4000],
+    ["Silver II", 5500],
+    ["Silver III", 7000],
+    ["Silver IV", 8500],
+    ["Gold I", 10000],
+    ["Gold II", 12500],
+    ["Gold III", 15000],
+    ["Gold IV", 17500],
+    ["Platinum I", 20000],
+    ["Platinum II", 23000],
+    ["Platinum III", 26000],
+    ["Platinum IV", 30000],
+  ];
+  /** Corridas possíveis no Main Stage: 6 dias × 5 tickets × 5 corridas. */
+  const LOH_MAX_RACES = 150;
+
+  /** Rank do LoH para um League Score (null sem score). */
+  function lohRank(score) {
+    if (score == null || !(score >= 0)) return null;
+    let r = LOH_RANKS[0][0];
+    for (const [name, min] of LOH_RANKS) if (score >= min) r = name;
+    return r;
+  }
+
+  /** Vitórias do time: só uma Uma vence cada corrida, então é a soma das vitórias de cada uma. */
+  function teamWins(d) {
+    return (d.team || []).reduce((a, t) => a + (t.n && t.w ? t.w : 0), 0);
+  }
+
+  /** Corridas do PvP: no CM vêm dos rounds; no LoH, do campo de corridas. */
+  function pvpRaces(d, id) {
+    if (!d) return isLohId(id) ? 0 : WINS_TOTAL;
+    return isLohId(id) ? d.rc || 0 : winsTotal(d.rat);
+  }
+
+  /** WR do time no LoH (0 sem corridas). */
+  function lohWr(d) {
+    return d && d.rc ? Math.min(1, teamWins(d) / d.rc) : 0;
   }
 
   /**
@@ -606,6 +693,13 @@
     roundTotals,
     ratingScore,
     winsTotal,
+    isLohId,
+    LOH_RANKS,
+    LOH_MAX_RACES,
+    lohRank,
+    teamWins,
+    pvpRaces,
+    lohWr,
     finalWinner,
     estimateStruct,
     umaRaces,

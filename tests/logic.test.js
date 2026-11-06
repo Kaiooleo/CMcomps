@@ -556,3 +556,30 @@ test("Uma que venceu a final: só com 1st e se estiver no time; entra no Summary
   const s2 = L.computeStats([{ id: "LOH3" }], { LOH3: r });
   assert.deepEqual(s2.winners, []);
 });
+
+test("LoH: rank pelo League Score, WR pelas vitórias das Umas e fora das finais dos CMs", () => {
+  assert.equal(L.lohRank(null), null);
+  assert.equal(L.lohRank(0), "Bronze I");
+  assert.equal(L.lohRank(19999), "Gold IV");
+  assert.equal(L.lohRank(20000), "Platinum I");
+  assert.equal(L.lohRank(45000), "Platinum IV");
+  const r = L.normalizeRecord({
+    team: [
+      { n: "A", w: 30 },
+      { n: "B", w: 20 },
+      { n: "C", w: 10 },
+    ],
+    ls: "31240",
+    rc: 150,
+    ex: true,
+    ti: "A",
+    pl: "1st",
+  });
+  assert.equal(L.teamWins(r), 60);
+  assert.equal(L.lohWr(r), 0.4);
+  assert.equal(L.pvpRaces(r, "LOH1"), 150);
+  const s = L.computeStats([{ id: "LOH1" }], { LOH1: r });
+  assert.equal(s.tot, 0, "LoH não conta como final");
+  assert.equal(s.loh[0].rank, "Platinum IV");
+  assert.deepEqual(s.titles, [["A", 1]]);
+});

@@ -230,11 +230,25 @@
       <h1><span class="cmid ${isLoh(cm.id) ? "loh" : ""}">${esc(cm.id)}</span> <span class="sc">· ${esc(cm.sc)}</span></h1>
       <div class="ln num">${courseLine(cm)}</div>
       ${cond(cm) ? `<div class="ln">${cond(cm)}</div>` : ""}
-      <div class="when"><span class="chip cur">${when}</span>${d && d.pl ? ` <span class="chip ${plClass(d.pl)}">${esc(d.pl)}</span>` : ""}</div>
+      <div class="when"><span class="chip cur">${when}</span>${d ? resultChip(cm.id, d, " ") : ""}</div>
     </a>
     <div class="ch-team">${teamHtml}</div>
   </section>`;
   }
+
+  /** Chip do resultado: colocação da final (CM) ou rank da liga (LoH). */
+  function resultChip(id, d, before = "") {
+    if (isLoh(id)) {
+      const r = L.lohRank(d.ls);
+      return r
+        ? `${before}<span class="chip lr ${tierClass(r)}">${esc(r)}</span>`
+        : "";
+    }
+    return d.pl
+      ? `${before}<span class="chip ${plClass(d.pl)}">${esc(d.pl)}</span>`
+      : "";
+  }
+  const tierClass = (rank) => "t-" + rank.split(" ")[0].toLowerCase();
 
   /* ---------- rankings (top 5 no Resumo, lista completa em página própria) ---------- */
   const TOP = 5;
@@ -318,6 +332,37 @@
       .join("")}</div>`;
   }
 
+  /** Painel do League of Heroes no Resumo (separado das finais dos CMs). */
+  function lohSummaryHtml(s) {
+    const L2 = s.loh;
+    if (!L2.length) return "";
+    const scored = L2.filter((x) => x.ls != null);
+    const best = scored.reduce((a, x) => (!a || x.ls > a.ls ? x : a), null);
+    const avg = scored.length
+      ? Math.round(scored.reduce((a, x) => a + x.ls, 0) / scored.length)
+      : null;
+    const wrs = L2.filter((x) => x.wr != null);
+    const avgWr = wrs.length
+      ? wrs.reduce((a, x) => a + x.wr, 0) / wrs.length
+      : null;
+    const ex = L2.filter((x) => x.ex).length;
+    const n = (v) => v.toLocaleString("en-US");
+    return `<section class="panel lohsum">
+    <div class="label" style="color:var(--loh)">League of Heroes</div>
+    <div class="facts">
+      <div><span class="label">Best rank</span><b class="num">${best ? `<span class="chip lr ${tierClass(best.rank)}">${esc(best.rank)}</span>` : "–"}</b>${best ? `<a href="#cm-${esc(best.id)}">${esc(best.id)} · ${n(best.ls)}</a>` : ""}</div>
+      <div><span class="label">Average score</span><b class="num">${avg != null ? n(avg) : "–"}</b><small>${scored.length} LoH${scored.length === 1 ? "" : "s"}</small></div>
+      <div><span class="label">Average WR</span><b class="num">${avgWr != null ? pct(avgWr) : "–"}</b></div>
+      <div><span class="label">Extra Stage</span><b class="num">${ex}</b><small>of ${L2.length}</small></div>
+    </div>
+    <div class="lohlist">${L2.map(
+      (x) =>
+        `<a href="#cm-${esc(x.id)}"><b>${esc(x.id)}</b>${x.rank ? `<span class="chip lr ${tierClass(x.rank)}">${esc(x.rank)}</span>` : ""}${x.ls != null ? `<span class="num">${n(x.ls)}</span>` : ""}${x.ex ? '<span class="chip exs">Extra Stage</span>' : ""}</a>`,
+    ).join("")}</div>
+    ${s.titles.length ? `<div class="titles"><span class="label">Character titles</span>${s.titles.map(([k, c]) => `<span class="ti"><span class="av">${charImg(k, true)}</span>${esc(k)}${c > 1 ? ` ×${c}` : ""}</span>`).join("")}</div>` : ""}
+  </section>`;
+  }
+
   function viewResumo() {
     setNav("resumo");
     const s = L.computeStats(CAT.cms, DATA, counted);
@@ -353,6 +398,7 @@
       }).join("")}</div>
     </div>
   </section>
+  ${lohSummaryHtml(s)}
   <section class="row2">
     <div class="panel">${panelHead("rank-winners", s.winners.length)}
       ${s.winners.length ? aceGrid(s.winners.slice(0, TOP)) : `<p class="empty">${s.pl["1st"] ? "Mark which Uma won the final on your 1st place PvPs." : "Nothing recorded yet."}</p>`}
@@ -395,8 +441,7 @@
     if (ph === "current")
       chips += `<span class="chip cur">Current PvP${CONF.date ? " · final " + fmtShort(FINAL_DAY) + (CONF.est ? " (est.)" : "") : ""}</span>`;
     if (ph === "future") chips += '<span class="chip none">Not counted</span>';
-    if (d && d.pl)
-      chips += `<span class="chip ${plClass(d.pl)}">${esc(d.pl)}</span>`;
+    if (d) chips += resultChip(c.id, d);
     else if (ph !== "future")
       chips += `<span class="chip none">${team.length ? "No result" : "Empty"}</span>`;
     return `<a class="tile ${ph === "future" ? "future" : ""} ${ph === "current" ? "current" : ""}" href="#cm-${esc(c.id)}">
@@ -464,7 +509,8 @@
     const { wins, races } = L.roundTotals(rat);
     return races ? ` · ${wins} / ${races} wins` : "";
   };
-  const umaWr = (t, total) => (t.w != null ? pct(t.w / (t.r || total)) : "–");
+  const umaWr = (t, total) =>
+    t.w != null && (t.r || total) ? pct(t.w / (t.r || total)) : "–";
   /** Rótulo da Uma k: 1–3 principais, depois "Extra 1", "Extra 2"… */
   const umaLabel = (k) =>
     k < L.TEAM_SIZE ? `Uma ${k + 1}` : `Extra ${k - L.TEAM_SIZE + 1}`;
@@ -519,7 +565,7 @@
 
   /** Card resumido de uma Uma na página do PvP; clicar abre a página dela. */
   function umaCardHtml(cmId, t, k) {
-    const total = L.winsTotal(DATA[cmId] && DATA[cmId].rat);
+    const total = L.pvpRaces(DATA[cmId], cmId);
     const href = `#uma-${esc(cmId)}-${k + 1}`;
     if (!t.n)
       return `<a class="panel umacard empty" href="${href}"><span class="plus">+</span><span>Choose ${umaLabel(k)}</span></a>`;
@@ -536,13 +582,90 @@
     <span class="info">
       <b class="nm">${esc(t.n)}</b>
       <span class="tags"><span class="chip ${t.ro === "Debuffer" ? "deb" : "ace"}">${esc(t.ro)}</span>${t.st ? `<span class="chip ${stClass(t.st)}">${esc(t.st)}</span>` : ""}</span>
-      <span class="wrbox"><span class="label">WR</span><b class="num">${umaWr(t, total)}</b><small>${t.w != null ? `${t.w} / ${t.r || total} wins` : t.r ? `${t.r} races` : "no wins"}</small></span>
+      <span class="wrbox"><span class="label">WR</span><b class="num">${umaWr(t, total)}</b><small>${t.w != null ? `${t.w} / ${t.r || total || "?"} wins` : t.r ? `${t.r} races` : "no wins"}</small></span>
     </span>
     <span class="minis">
       <span class="label">Parents</span>${parentsSummary(t.p)}
       <span class="label">Deck</span><span class="mrow deckrow">${mini(t.d, cardImg, L.BORROWED_SLOT)}</span>
     </span>
   </a>`;
+  }
+
+  /** Resultado do LoH: League Score (dá o rank), corridas, Extra Stage e título. */
+  function lohResultHtml(d) {
+    const rank = L.lohRank(d.ls);
+    const next = L.LOH_RANKS.find(([, min]) => d.ls != null && min > d.ls);
+    const team = d.team.filter((t) => t.n);
+    const wins = L.teamWins(d);
+    return `<section class="result loh">
+    <div class="panel"><div class="label">League</div>
+      <div class="lohrow">
+        <label class="lsbox">League Score<input id="ls" type="number" min="0" step="10" inputmode="numeric" value="${d.ls ?? ""}" placeholder="e.g. 31240"></label>
+        <div class="rankbox"><span class="label">Rank</span><b id="lrank" class="chip lr ${rank ? tierClass(rank) : "none"}">${rank ? esc(rank) : "–"}</b><small id="lnext">${next ? `${(next[1] - d.ls).toLocaleString("en-US")} to ${next[0]}` : rank ? "Top rank" : "Rank comes from the score"}</small></div>
+      </div>
+      <button type="button" class="extog" id="ex" aria-pressed="${d.ex}"><span class="dot"></span>Reached the Extra Stage <small>(top 96)</small></button>
+      ${
+        team.length
+          ? `<div class="wonby"><div class="label">Character title</div>
+      <div class="wonpick" role="group" aria-label="Uma that got the character title">${team
+        .map(
+          (t) =>
+            `<button type="button" data-ti="${esc(t.n)}" aria-pressed="${d.ti === t.n}" title="${esc(t.n)}"><span class="av">${charImg(t.n, true)}</span><span class="nm">${esc(t.n)}</span></button>`,
+        )
+        .join("")}</div></div>`
+          : ""
+      }
+    </div>
+    <div class="panel"><div class="label">Races</div>
+      <label class="rcbox">Races in the Main Stage<input id="rc" type="number" min="1" max="${L.LOH_MAX_RACES}" inputmode="numeric" value="${d.rc ?? ""}" placeholder="up to ${L.LOH_MAX_RACES}"></label>
+      <p class="hint">5 races per ticket · 5 tickets a day · 6 days. Wins come from each Uma.</p>
+      <div class="score"><b class="num" id="lwr">${d.rc ? pct(L.lohWr(d)) : "–"}</b><span style="color:var(--muted)">WR total<span id="lwr-n">${d.rc ? ` · ${wins} / ${d.rc} wins` : wins ? ` · ${wins} wins` : ""}</span></span></div>
+    </div>
+  </section>`;
+  }
+
+  function bindLohResult(id, d) {
+    const ls = $("#ls");
+    ls.addEventListener("input", () => {
+      const v = parseInt(ls.value, 10);
+      d.ls = v >= 0 ? v : null;
+      save();
+      const r = L.lohRank(d.ls);
+      const next = L.LOH_RANKS.find(([, min]) => d.ls != null && min > d.ls);
+      const b = $("#lrank");
+      b.className = `chip lr ${r ? tierClass(r) : "none"}`;
+      b.textContent = r || "–";
+      $("#lnext").textContent = next
+        ? `${(next[1] - d.ls).toLocaleString("en-US")} to ${next[0]}`
+        : r
+          ? "Top rank"
+          : "Rank comes from the score";
+    });
+    const rc = $("#rc");
+    rc.addEventListener("input", () => {
+      const v = parseInt(rc.value, 10);
+      d.rc = v > 0 ? v : null;
+      save();
+      const wins = L.teamWins(d);
+      $("#lwr").textContent = d.rc ? pct(L.lohWr(d)) : "–";
+      $("#lwr-n").textContent = d.rc
+        ? ` · ${wins} / ${d.rc} wins`
+        : wins
+          ? ` · ${wins} wins`
+          : "";
+    });
+    $("#ex").addEventListener("click", () => {
+      d.ex = !d.ex;
+      save();
+      $("#ex").setAttribute("aria-pressed", d.ex);
+    });
+    document.querySelectorAll("[data-ti]").forEach((b) =>
+      b.addEventListener("click", () => {
+        d.ti = d.ti === b.dataset.ti ? null : b.dataset.ti;
+        save();
+        viewCM(id);
+      }),
+    );
   }
 
   /** Com 1st marcado: escolher qual Uma do time venceu a final. */
@@ -702,7 +825,10 @@
     .map((t, k) => umaCardHtml(id, t, k))
     .join("")}</section>
   ${extrasHtml(id, d)}
-  <section class="result">
+  ${
+    isLoh(id)
+      ? lohResultHtml(d)
+      : `<section class="result">
     <div class="panel"><div class="label">Final</div>
       <div class="places" role="group" aria-label="Final">${[...PLACES, ""].map((p) => `<button type="button" class="p-${p ? p.replace(" ", "") : "none"}" data-pl="${p}" aria-pressed="${d.pl === p}">${p || "No result"}</button>`).join("")}</div>
       ${winnerPicker(d, id)}
@@ -720,7 +846,8 @@
         .join("")}</div>
       <div class="score"><b class="num" id="score">${total ? pct(total) : "–"}</b><span style="color:var(--muted)">WR total<span id="score-n">${raceCount(d.rat)}</span></span></div>
     </div>
-  </section>
+  </section>`
+  }
   </div>
   ${extra ? `<div data-pane="meta" ${tab === "meta" ? "" : "hidden"}>${extra}</div>` : ""}`;
     document.querySelectorAll(".pvptabs [data-tab]").forEach((b) =>
@@ -757,20 +884,22 @@
         viewCM(id);
       }),
     );
-    d.rat.forEach((_, k) => {
-      const input = $("#rat-" + k);
-      input.addEventListener("input", () => {
-        const v = input.value.trim();
-        const ok = L.isValidRound(v);
-        input.classList.toggle("bad", !ok);
-        d.rat[k] = v;
-        save();
-        $("#dwr-" + k).textContent = v && ok ? pct(L.ratingScore([v])) : "";
-        const s = L.ratingScore(d.rat);
-        $("#score").textContent = s ? pct(s) : "–";
-        $("#score-n").textContent = raceCount(d.rat);
+    if (isLoh(id)) bindLohResult(id, d);
+    else
+      d.rat.forEach((_, k) => {
+        const input = $("#rat-" + k);
+        input.addEventListener("input", () => {
+          const v = input.value.trim();
+          const ok = L.isValidRound(v);
+          input.classList.toggle("bad", !ok);
+          d.rat[k] = v;
+          save();
+          $("#dwr-" + k).textContent = v && ok ? pct(L.ratingScore([v])) : "";
+          const s = L.ratingScore(d.rat);
+          $("#score").textContent = s ? pct(s) : "–";
+          $("#score-n").textContent = raceCount(d.rat);
+        });
       });
-    });
   }
 
   /* ---------- página de uma Uma (dentro de um PvP) ---------- */
@@ -794,13 +923,13 @@
     $("#app").innerHTML = `
   ${pvpHead(cm, ` <span class="sub">· ${umaLabel(k)}</span>`)}
   <nav class="seg umatabs" aria-label="Umas in this PvP">${tabs}</nav>
-  <section>${runnerHtml(t, k, true, L.winsTotal(d.rat))}</section>`;
+  <section>${runnerHtml(t, k, true, L.pvpRaces(d, id))}</section>`;
     bindRunner(
       document.querySelector(".runner"),
       t,
       k,
       () => viewUma(id, k),
-      L.winsTotal(d.rat),
+      L.pvpRaces(d, id),
     );
     const rm = $("#rm-uma");
     if (rm)
@@ -860,8 +989,9 @@
     races.addEventListener("input", () => {
       const v = parseInt(races.value, 10);
       change(() => (t.r = v > 0 ? v : null), false);
-      wins.max = t.r || total;
-      card.querySelector(".wins .of").textContent = "/ " + (t.r || total);
+      wins.max = t.r || total || "";
+      card.querySelector(".wins .of").textContent =
+        "/ " + (t.r || total || "?");
       card.querySelector(".wrp").textContent = umaWr(t, total);
     });
     card.querySelectorAll("[data-p]").forEach((b) =>
@@ -970,8 +1100,8 @@
         <div class="fields">
           <label class="nolab"><select name="ro" aria-label="Ace or Debuffer">${ROLES.map((r) => `<option ${t.ro === r ? "selected" : ""}>${r}</option>`).join("")}</select></label>
           <label class="nolab"><select name="st" class="${stClass(t.st)}" aria-label="Style"><option value="">Style —</option>${STYLES.map((s) => `<option ${t.st === s ? "selected" : ""}>${s}</option>`).join("")}</select></label>
-          <label>Wins<span class="wins"><input name="w" type="number" min="0" max="${t.r || total}" inputmode="numeric" value="${t.w ?? ""}" aria-label="Wins"><span class="of">/ ${t.r || total}</span></span></label>
-          <label>Races<span class="wins"><input name="r" type="number" min="1" inputmode="numeric" value="${t.r ?? ""}" placeholder="${total}" aria-label="Races this Uma ran (empty = all ${total})"></span></label>
+          <label>Wins<span class="wins"><input name="w" type="number" min="0" max="${t.r || total || ""}" inputmode="numeric" value="${t.w ?? ""}" aria-label="Wins"><span class="of">/ ${t.r || total || "?"}</span></span></label>
+          <label>Races<span class="wins"><input name="r" type="number" min="1" inputmode="numeric" value="${t.r ?? ""}" placeholder="${total || ""}" aria-label="Races this Uma ran (empty = all ${total || "races of this PvP"})"></span></label>
           <div class="wrbox"><span class="label">WR</span><b class="num wrp">${umaWr(t, total)}</b></div>
         </div>${big && k >= L.TEAM_SIZE ? `<button type="button" class="btn rmuma" id="rm-uma">Remove this Uma</button>` : ""}</div></div>
     <div class="lower">
@@ -1117,6 +1247,12 @@
     accent: "#8fd8ec",
     pink: "#f070ab",
     loh: "#f0625e",
+    tier: {
+      Bronze: "#c98a5a",
+      Silver: "#b9c2cc",
+      Gold: "#e2b843",
+      Platinum: "#7fdcd0",
+    },
     place: {
       "1st": "#e2b843",
       "2nd": "#aab4bf",
@@ -1330,8 +1466,11 @@
     ctx.fillText(course, P, 180);
 
     // resultado (direita)
-    const score = L.ratingScore(d.rat);
-    const tot = L.roundTotals(d.rat);
+    const lohMode = isLoh(id);
+    const score = lohMode ? (d.rc ? L.lohWr(d) : 0) : L.ratingScore(d.rat);
+    const tot = lohMode
+      ? { wins: L.teamWins(d), races: d.rc || 0 }
+      : L.roundTotals(d.rat);
     const rx = W - P;
     ctx.textAlign = "right";
     if (score) {
@@ -1343,16 +1482,19 @@
       ctx.fillText(`WR · ${tot.wins} / ${tot.races} wins`, rx, 166);
     }
     ctx.textAlign = "left";
-    if (d.pl) {
+    const badge = lohMode ? L.lohRank(d.ls) : d.pl;
+    if (badge) {
       ctx.font = SH.font(800, 26);
-      const w = ctx.measureText(d.pl).width + 36;
+      const w = ctx.measureText(badge).width + 36;
       const x = score ? rx - 250 - w : rx - w;
       rrect(ctx, x, 92, w, 48, 24);
-      ctx.fillStyle = SH.place[d.pl] || SH.accent;
+      ctx.fillStyle = lohMode
+        ? SH.tier[badge.split(" ")[0]] || SH.accent
+        : SH.place[d.pl] || SH.accent;
       ctx.fill();
       ctx.fillStyle = "#0b0f14";
       ctx.textBaseline = "middle";
-      ctx.fillText(d.pl, x + 18, 117);
+      ctx.fillText(badge, x + 18, 117);
       ctx.textBaseline = "alphabetic";
     }
 
@@ -1397,7 +1539,7 @@
           t.ro === "Debuffer" ? SH.loh : SH.accent,
         ) + 8;
       if (t.st) chip(ctx, t.st, chx, cy + 72, SH.style[t.st] || SH.muted);
-      const total = L.winsTotal(d.rat);
+      const total = L.pvpRaces(d, id);
       ctx.fillStyle = SH.muted;
       ctx.font = SH.font(700, 15);
       ctx.fillText("WR", tx, cy + 146);
@@ -1527,7 +1669,7 @@
       ctx.font = SH.font(700, 14);
       ctx.fillText("EXTRA UMAS", P, ey + 38);
       let ex = P + 120;
-      const total = L.winsTotal(d.rat);
+      const total = L.pvpRaces(d, id);
       for (const t of extras) {
         const c = CHAR.get(t.n);
         rrect(ctx, ex, ey, 64, 64, 14);
@@ -1560,10 +1702,14 @@
     ctx.font = SH.font(600, 18);
     let fx = P;
     const labels = ["R1 D1", "R1 D2", "R2 D1", "R2 D2"];
-    d.rat.forEach((r, k) => {
-      const p = L.parseRound(r);
-      if (!p) return;
-      const txt = `${labels[k]}  ${r}  (${pct(p.wins / p.races)})`;
+    const pills = lohMode
+      ? [
+          d.ls != null && `League Score  ${d.ls.toLocaleString("en-US")}`,
+          d.ex && "Extra Stage",
+          d.ti && `Title: ${d.ti}`,
+        ].filter(Boolean)
+      : [];
+    for (const txt of pills) {
       ctx.fillStyle = SH.panel2;
       const w = ctx.measureText(txt).width + 24;
       rrect(ctx, fx, fy - 24, w, 36, 18);
@@ -1571,7 +1717,20 @@
       ctx.fillStyle = SH.fg;
       ctx.fillText(txt, fx + 12, fy);
       fx += w + 10;
-    });
+    }
+    if (!lohMode)
+      d.rat.forEach((r, k) => {
+        const p = L.parseRound(r);
+        if (!p) return;
+        const txt = `${labels[k]}  ${r}  (${pct(p.wins / p.races)})`;
+        ctx.fillStyle = SH.panel2;
+        const w = ctx.measureText(txt).width + 24;
+        rrect(ctx, fx, fy - 24, w, 36, 18);
+        ctx.fill();
+        ctx.fillStyle = SH.fg;
+        ctx.fillText(txt, fx + 12, fy);
+        fx += w + 10;
+      });
     ctx.textAlign = "right";
     ctx.fillStyle = SH.faint;
     ctx.font = SH.font(600, 18);
