@@ -340,7 +340,7 @@
     <div class="panel"><div class="label">Not available in this race</div>
       <p class="note">Banned: ${TOUR.bans.map(esc).join(", ")}.</p>
       ${blockedList.length ? `<p class="note">${blockedList.map(([n, why]) => `${esc(n)} <small>(${esc(why)})</small>`).join(" · ")}</p>` : ""}
-      <p class="note">The picker only shows Umas and cards released on Global by ${esc(fmtDate(r.date))}.</p>
+      <p class="note">The picker only shows Umas and cards released on Global by ${esc(fmtDate(r.date))}. Upcoming banners use estimated dates.</p>
     </div>
   </section>`;
     bindRunner(document.querySelector(".runner"), t, 0, () => viewRace(id), 0);
