@@ -2455,3 +2455,131 @@ select[name="st"] option {
   --line: oklch(from var(--tc) 0.29 0.025 h);
   --muted: oklch(from var(--tc) 0.74 0.035 h);
 }
+
+/* ---------- campeonato entre amigos (tourney.js) ---------- */
+.tourhead h1 {
+  font-size: clamp(28px, 5vw, 40px);
+}
+.tsum .wr b {
+  font-size: 44px;
+}
+.tbans {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 8px 0;
+}
+.tban {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 4px 4px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--loh) 14%, transparent);
+  font-weight: 700;
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+}
+.tban .av,
+.tuma .av {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex: none;
+  background: var(--surface-2);
+}
+.tban .av > *,
+.tuma .av > * {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+.traces {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+.trace {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr) minmax(0, 220px) 110px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--fg);
+  text-decoration: none;
+}
+.trace:hover {
+  border-color: var(--accent);
+}
+.trace.final {
+  border-color: color-mix(in oklab, var(--gold) 60%, var(--line));
+}
+.trace.next {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.tdate {
+  display: grid;
+  justify-items: center;
+  line-height: 1.1;
+}
+.tdate b {
+  font-size: 24px;
+}
+.tdate small,
+.tinfo small,
+.tres small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.tinfo {
+  display: grid;
+  min-width: 0;
+}
+.tcond {
+  opacity: 0.85;
+}
+.tuma {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-weight: 600;
+}
+.tuma .pick {
+  color: var(--accent);
+}
+.tres {
+  display: grid;
+  justify-items: end;
+  text-align: right;
+}
+.tres b {
+  font-size: 18px;
+}
+.tused {
+  margin: 6px 0 0;
+}
+.tplaces {
+  flex-wrap: wrap;
+}
+/* no campeonato a Uma corre sozinha: sem Ace/Debuffer, vitórias e WR */
+.tourrun .runner label:has([name="ro"]),
+.tourrun .runner label:has([name="w"]),
+.tourrun .runner label:has([name="r"]),
+.tourrun .runner .wrbox {
+  display: none;
+}
+@media (max-width: 640px) {
+  .trace {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+  .tuma,
+  .tres {
+    grid-column: 2;
+    justify-items: start;
+    text-align: left;
+  }
+}

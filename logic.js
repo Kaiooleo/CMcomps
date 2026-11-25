@@ -385,6 +385,7 @@
       rc: null, // corridas no Main Stage
       ex: false, // entrou no Extra Stage (top 96)
       ti: null, // Uma que recebeu o título de personagem
+      pos: null, // campeonato: colocação na corrida (1º = 1)
     };
   }
 
@@ -413,6 +414,8 @@
     base.rc = rc > 0 ? rc : null;
     base.ex = r.ex === true;
     base.ti = str(r.ti);
+    const pos = parseInt(r.pos, 10);
+    base.pos = pos >= 1 && pos <= 99 ? pos : null;
     base.rat = fit(r.rat, ROUNDS, "", (v) => String(v));
     const src = Array.isArray(r.team) ? r.team.slice(0, MAX_TEAM) : [];
     const team = Array.from(
@@ -488,6 +491,7 @@
       r.rc == null &&
       !r.ex &&
       !r.ti &&
+      r.pos == null &&
       r.rat.every((x) => !x) &&
       r.team.every(isEmptyUma)
     );
@@ -541,6 +545,55 @@
   /** WR do time no LoH (0 sem corridas). */
   function lohWr(d) {
     return d && d.rc ? Math.min(1, teamWins(d) / d.rc) : 0;
+  }
+
+  /* ---------- Campeonato entre amigos ---------- */
+
+  /** Personagem sem a roupa: "Daiwa Scarlet (Christmas)" → "Daiwa Scarlet". */
+  const baseName = (n) =>
+    n
+      ? String(n)
+          .replace(/\s*\(.*\)\s*$/, "")
+          .trim()
+      : "";
+
+  /**
+   * Personagens que não podem correr numa corrida do campeonato: as banidas e as
+   * já usadas em outra corrida. Semifinal e Grande Final são uma fase só: entre
+   * elas pode repetir, mas não com as classificatórias.
+   */
+  function tourneyBlocked(t, data, raceId) {
+    const race = t.races.find((r) => r.id === raceId);
+    const out = new Map(t.bans.map((b) => [baseName(b), "Banned"]));
+    for (const r of t.races) {
+      if (r.id === raceId) continue;
+      if (race && race.ph === "final" && r.ph === "final") continue;
+      const n = data[r.id] && data[r.id].team[0] && data[r.id].team[0].n;
+      if (n && !out.has(baseName(n)))
+        out.set(baseName(n), "Used in " + r.label);
+    }
+    return out;
+  }
+
+  /** Pontos de uma colocação nas classificatórias (fora da tabela = 0). */
+  const tourneyPoints = (t, pos) => (pos && t.points[pos - 1]) || 0;
+
+  /** Resumo do campeonato: pontos das classificatórias, corridas feitas e Umas usadas. */
+  function tourneySummary(t, data) {
+    let pts = 0,
+      done = 0;
+    const used = [];
+    for (const r of t.races) {
+      const d = data[r.id];
+      const n = d && d.team[0] && d.team[0].n;
+      if (n && !used.includes(baseName(n))) used.push(baseName(n));
+      if (r.ph === "qual" && d && d.pos) {
+        pts += tourneyPoints(t, d.pos);
+        done++;
+      }
+    }
+    const quals = t.races.filter((r) => r.ph === "qual").length;
+    return { pts, done, quals, used, max: quals * t.points[0] };
   }
 
   /**
@@ -693,6 +746,10 @@
     roundTotals,
     ratingScore,
     winsTotal,
+    baseName,
+    tourneyBlocked,
+    tourneyPoints,
+    tourneySummary,
     isLohId,
     LOH_RANKS,
     LOH_MAX_RACES,

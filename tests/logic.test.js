@@ -583,3 +583,37 @@ test("LoH: rank pelo League Score, WR pelas vitórias das Umas e fora das finais
   assert.equal(s.loh[0].rank, "Platinum IV");
   assert.deepEqual(s.titles, [["A", 1]]);
 });
+
+test("campeonato: banidas, sem repetir personagem (semi e final podem repetir) e pontos", () => {
+  const T = {
+    bans: ["Oguri Cap"],
+    points: [15, 12, 10, 8, 6, 5, 4, 3, 2, 1],
+    races: [
+      { id: "Q1", ph: "qual", label: "Qualifier 1" },
+      { id: "Q2", ph: "qual", label: "Qualifier 2" },
+      { id: "SF", ph: "final", label: "Semifinal" },
+      { id: "F", ph: "final", label: "Grand Final" },
+    ],
+  };
+  const rec = (n, pos) => L.normalizeRecord({ team: [{ n }], pos });
+  const data = {
+    Q1: rec("Daiwa Scarlet (Christmas)", 2),
+    Q2: rec("Gold Ship", 11),
+    SF: rec("Seiun Sky", 3),
+  };
+  assert.equal(L.baseName("Daiwa Scarlet (Christmas)"), "Daiwa Scarlet");
+  const b2 = L.tourneyBlocked(T, data, "Q2");
+  assert.equal(b2.get("Oguri Cap"), "Banned");
+  assert.equal(b2.get("Daiwa Scarlet"), "Used in Qualifier 1");
+  assert.ok(
+    b2.has("Seiun Sky"),
+    "a Uma da fase final não pode ser usada nas classificatórias",
+  );
+  const bf = L.tourneyBlocked(T, data, "F");
+  assert.ok(!bf.has("Seiun Sky"), "semi e final podem repetir");
+  assert.ok(bf.has("Gold Ship"));
+  const s = L.tourneySummary(T, data);
+  assert.equal(s.pts, 12, "2º = 12, 11º = 0");
+  assert.equal(s.done, 2);
+  assert.deepEqual(s.used, ["Daiwa Scarlet", "Gold Ship", "Seiun Sky"]);
+});

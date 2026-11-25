@@ -187,9 +187,11 @@
 
   /* ---------- navegação ---------- */
   function setNav(tab) {
-    $("#back").hidden = !/^#(cm|rank|uma)-/.test(location.hash);
-    for (const id of ["resumo", "cms"])
-      $("#nav-" + id).toggleAttribute("aria-current", id === tab);
+    $("#back").hidden = !/^#(cm|rank|uma|race)-/.test(location.hash);
+    for (const id of ["resumo", "cms", "tour"]) {
+      const a = $("#nav-" + id);
+      if (a) a.toggleAttribute("aria-current", id === tab);
+    }
     $("#nav-" + tab).setAttribute("aria-current", "page");
   }
   function route() {
@@ -199,9 +201,157 @@
     const uma = /^uma-(.+)-([1-9])$/.exec(h);
     if (uma && CM_BY_ID.has(uma[1])) return viewUma(uma[1], uma[2] - 1);
     if (h === "cms") return viewList();
+    if (TOUR && h === TOUR.id) return viewTour();
+    if (TOUR && h.startsWith("race-") && RACE_BY_ID.has(h.slice(5)))
+      return viewRace(h.slice(5));
     const rk = /^(rank-[a-z]+)(~loh)?$/.exec(h);
     if (rk && RANKINGS[rk[1]]) return viewRanking(rk[1], rk[2] ? "loh" : "cm");
     return viewResumo();
+  }
+
+  /* ---------- Campeonato entre amigos (tourney.js) ---------- */
+  const TOUR = window.CM_TOURNEY || null;
+  const RACE_BY_ID = new Map(
+    TOUR ? TOUR.races.map((r) => [r.id, { ...r, tour: true }]) : [],
+  );
+  let runnerBlocked = null; // personagens bloqueadas na corrida aberta
+  if (TOUR) {
+    const nav = $("#nav-cms");
+    if (nav && !$("#nav-tour"))
+      nav.insertAdjacentHTML(
+        "afterend",
+        `<a href="#${TOUR.id}" id="nav-tour" class="tournav">${esc(TOUR.name)}</a>`,
+      );
+  }
+  const ordinal = (n) =>
+    n +
+    (n % 10 === 1 && n !== 11
+      ? "st"
+      : n % 10 === 2 && n !== 12
+        ? "nd"
+        : n % 10 === 3 && n !== 13
+          ? "rd"
+          : "th");
+  const raceLine = (r) =>
+    [r.tr, `${r.m}m`, r.su, distOf(r), r.dir].filter(Boolean).join(" · ");
+  const raceCond = (r) => [r.se, r.we, r.gr, "Great"].join(" · ");
+
+  /** O que a colocação significa em cada fase. */
+  function raceOutcome(r, pos) {
+    if (!pos) return "";
+    if (r.ph === "qual") return `${L.tourneyPoints(TOUR, pos)} pts`;
+    if (r.id.endsWith("-SF"))
+      return pos <= TOUR.advance.semi ? "Advanced to the final" : "Out";
+    return pos === 1 ? "Champion" : `${ordinal(pos)} place`;
+  }
+
+  function viewTour() {
+    setNav("tour");
+    const s = L.tourneySummary(TOUR, DATA);
+    const today = new Date().toISOString().slice(0, 10);
+    const next = TOUR.races.find((r) => r.date >= today);
+    const rows = TOUR.races
+      .map((r) => {
+        const d = DATA[r.id];
+        const t = d && d.team[0];
+        const pos = d && d.pos;
+        return `<a class="trace ${r.ph} ${next && next.id === r.id ? "next" : ""}" href="#race-${esc(r.id)}">
+        <span class="tdate"><b class="num">${esc(r.date.slice(8))}</b><small>${esc(fmtShort(r.date).split(" ")[0])}</small></span>
+        <span class="tinfo"><small class="label">${esc(r.label)}</small><b>${esc(r.nm)}</b><small>${esc(raceLine(r))}</small><small class="tcond">${esc(raceCond(r))}</small></span>
+        <span class="tuma">${t && t.n ? `<span class="av">${charImg(t.n, true)}</span><span>${esc(t.n)}</span>` : '<span class="pick">Choose Uma</span>'}</span>
+        <span class="tres">${pos ? `<b class="num">${ordinal(pos)}</b><small>${esc(raceOutcome(r, pos))}</small>` : '<small class="muted">No result</small>'}</span>
+      </a>`;
+      })
+      .join("");
+    const bans = TOUR.bans
+      .map((b) => {
+        const c = CAT.chars.find((x) => x.n === b);
+        return `<span class="tban"><span class="av">${c ? charImg(c.n, true) : ""}</span>${esc(b)}</span>`;
+      })
+      .join("");
+    $("#app").innerHTML = `
+  <section class="cmhead tourhead">
+    <div class="ttl"><div class="label">Friends tournament</div><h1>${esc(TOUR.name)}</h1></div>
+    <div class="meta"><span class="chip">${esc(fmtDate(TOUR.races[0].date))} – ${esc(fmtDate(TOUR.races.at(-1).date))}</span><span class="chip">${esc(TOUR.note)}</span></div>
+  </section>
+  <section class="row2">
+    <div class="panel tsum">
+      <div class="label">Qualifiers</div>
+      <div class="wr"><b class="num">${s.pts}</b><span>points · ${s.done} / ${s.quals} races</span></div>
+      <p class="note">Top ${TOUR.advance.qual} of each group of 10 go to the semifinal. Points per place: ${TOUR.points.map((p, i) => `${ordinal(i + 1)} ${p}`).join(" · ")}.</p>
+    </div>
+    <div class="panel">
+      <div class="label">Ban list</div>
+      <div class="tbans">${bans}</div>
+      <p class="note">Banned in every version. They can still be used as parents.</p>
+    </div>
+  </section>
+  <section class="panel">
+    <div class="label">Races</div>
+    <div class="traces">${rows}</div>
+    <p class="note">One Uma per race. A character used in a qualifier can't run again, in any version. The semifinal and the final are one phase: you can use the same Uma in both, but not one from the qualifiers.</p>
+  </section>
+  <section class="panel">
+    <div class="label">Characters used (${s.used.length})</div>
+    <p class="tused">${s.used.length ? s.used.map(esc).join(" · ") : "None yet."}</p>
+  </section>`;
+  }
+
+  function viewRace(id) {
+    setNav("tour");
+    const r = RACE_BY_ID.get(id);
+    const d = record(id);
+    const t = d.team[0];
+    pickerPvpId = null;
+    pickerPvp = r;
+    runnerBlocked = L.tourneyBlocked(TOUR, DATA, id);
+    const i = TOUR.races.findIndex((x) => x.id === id);
+    const prev = TOUR.races[i - 1];
+    const nextR = TOUR.races[i + 1];
+    const meta = [
+      r.tr,
+      `${r.m}m`,
+      r.su,
+      distOf(r),
+      r.dir,
+      r.se,
+      r.we,
+      r.gr,
+      "Mood: Great",
+    ]
+      .map((x) => `<span class="chip">${esc(x)}</span>`)
+      .join("");
+    const places = Array.from({ length: 10 }, (_, n) => n + 1);
+    const blockedList = [...runnerBlocked].filter(
+      ([, why]) => why !== "Banned",
+    );
+    $("#app").innerHTML = `
+  <section class="cmhead">
+    <div class="ttl"><div class="label">${esc(TOUR.name)} · ${esc(r.label)} · ${esc(fmtDate(r.date))}, 20:00</div><h1>${esc(r.nm)}</h1>${r.sub ? `<div class="label">${esc(r.sub)}</div>` : ""}</div>
+    <div class="meta">${meta}</div>
+    <div class="nav2">${prev ? `<a class="btn" href="#race-${esc(prev.id)}">← ${esc(prev.label)}</a>` : ""}<a class="btn" href="#${esc(TOUR.id)}">All races</a>${nextR ? `<a class="btn" href="#race-${esc(nextR.id)}">${esc(nextR.label)} →</a>` : ""}</div>
+  </section>
+  <section class="tourrun">${runnerHtml(t, 0, true, 0)}</section>
+  <section class="row2">
+    <div class="panel"><div class="label">Result</div>
+      <div class="places tplaces" role="group" aria-label="Place in this race">${places.map((n) => `<button type="button" data-pos="${n}" aria-pressed="${d.pos === n}">${ordinal(n)}</button>`).join("")}<button type="button" data-pos="" aria-pressed="${!d.pos}">No result</button></div>
+      <p class="note" id="tout">${d.pos ? esc(raceOutcome(r, d.pos)) : r.ph === "qual" ? "Points: " + TOUR.points.map((p, j) => `${ordinal(j + 1)} ${p}`).join(" · ") : r.id.endsWith("-SF") ? `Top ${TOUR.advance.semi} go to the Grand Final.` : "1st place is the champion."}</p>
+    </div>
+    <div class="panel"><div class="label">Not available in this race</div>
+      <p class="note">Banned: ${TOUR.bans.map(esc).join(", ")}.</p>
+      ${blockedList.length ? `<p class="note">${blockedList.map(([n, why]) => `${esc(n)} <small>(${esc(why)})</small>`).join(" · ")}</p>` : ""}
+      <p class="note">The picker only shows Umas and cards released on Global by ${esc(fmtDate(r.date))}.</p>
+    </div>
+  </section>`;
+    bindRunner(document.querySelector(".runner"), t, 0, () => viewRace(id), 0);
+    document.querySelectorAll("[data-pos]").forEach((b) =>
+      b.addEventListener("click", () => {
+        const v = parseInt(b.dataset.pos, 10);
+        d.pos = v || null;
+        save();
+        viewRace(id);
+      }),
+    );
   }
 
   /* ---------- Resumo ---------- */
@@ -947,6 +1097,7 @@
   /* ---------- página de uma Uma (dentro de um PvP) ---------- */
   function viewUma(id, k) {
     setNav("cms");
+    runnerBlocked = null;
     pickerPvpId = id;
     const cm = CM_BY_ID.get(id);
     const d = record(id);
@@ -1007,8 +1158,10 @@
               .map((u) => [u.n, u.use])
           : [],
       );
+      pickerBlocked = runnerBlocked;
       openPicker("char", t.n, umaLabel(k), (v) => change(() => (t.n = v)));
       pickerUmas = new Map();
+      pickerBlocked = null;
     };
     card.querySelector(".main").addEventListener("click", pickUma);
     card.querySelector(".rname").addEventListener("click", pickUma);
@@ -1169,6 +1322,8 @@
   // se tem hoje); o Current e os seguintes usam o próprio limite
   const inPvp = (item) => {
     if (!pickerPvp) return true;
+    // campeonato: só o que já saiu no Global até o dia da corrida
+    if (pickerPvp.tour) return !!item.re && item.re <= pickerPvp.date;
     const cur = CM_BY_ID.get(CONF.cur);
     const ref = cur && pickerPvp.i < cur.i ? cur : pickerPvp;
     return L.releasedBy(item, ref, glEndOf(ref.id));
@@ -1176,10 +1331,11 @@
   let pickerRecs = new Set(); // cartas recomendadas (PvP e estilo da Uma aberta)
   let pickerPvpId = null; // id do PvP da página de Uma aberta
   let pickerUmas = new Map(); // Umas recomendadas (nome → % de uso no JP)
+  let pickerBlocked = null; // campeonato: personagens que não podem correr (nome → motivo)
   const pickerState = { q: "", rarity: new Set(), type: new Set() };
 
   function openPicker(kind, current, title, onPick, score = null) {
-    picker = { kind, onPick, score, umas: pickerUmas };
+    picker = { kind, onPick, score, umas: pickerUmas, blocked: pickerBlocked };
     pickerState.q = "";
     $("#pk-q").value = "";
     $("#pk-title").textContent = title;
@@ -1221,7 +1377,12 @@
     const items =
       picker.kind === "char"
         ? CAT.chars
-            .filter((c) => inPvp(c) && (!q || c.n.toLowerCase().includes(q)))
+            .filter(
+              (c) =>
+                inPvp(c) &&
+                !(picker.blocked && picker.blocked.has(L.baseName(c.n))) &&
+                (!q || c.n.toLowerCase().includes(q)),
+            )
             .map((c) => ({
               c,
               sc: picker.score ? picker.score(c.n) : null,
