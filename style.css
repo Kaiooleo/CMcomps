@@ -2551,6 +2551,15 @@ select[name="st"] option {
 .tuma .pick {
   color: var(--accent);
 }
+.tname {
+  display: grid;
+  min-width: 0;
+}
+.tname small {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--st, var(--muted));
+}
 .tres {
   display: grid;
   justify-items: end;

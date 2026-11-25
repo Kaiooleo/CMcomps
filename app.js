@@ -258,7 +258,7 @@
         return `<a class="trace ${r.ph} ${next && next.id === r.id ? "next" : ""}" href="#race-${esc(r.id)}">
         <span class="tdate"><b class="num">${esc(r.date.slice(8))}</b><small>${esc(fmtShort(r.date).split(" ")[0])}</small></span>
         <span class="tinfo"><small class="label">${esc(r.label)}</small><b>${esc(r.nm)}</b><small>${esc(raceLine(r))}</small><small class="tcond">${esc(raceCond(r))}</small></span>
-        <span class="tuma">${t && t.n ? `<span class="av">${charImg(t.n, true)}</span><span>${esc(t.n)}</span>` : '<span class="pick">Choose Uma</span>'}</span>
+        <span class="tuma">${t && t.n ? `<span class="av">${charImg(t.n, true)}</span><span class="tname"><span>${esc(t.n)}</span>${t.st ? `<small class="${stClass(t.st)}">${esc(t.st)}</small>` : '<small class="muted">No style</small>'}</span>` : '<span class="pick">Choose Uma</span>'}</span>
         <span class="tres">${pos ? `<b class="num">${ordinal(pos)}</b><small>${esc(raceOutcome(r, pos))}</small>` : '<small class="muted">No result</small>'}</span>
       </a>`;
       })
