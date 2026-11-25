@@ -2250,6 +2250,7 @@
     const uma = /^#uma-(.+)-\d$/.exec(hash);
     if (uma) return "cm-" + uma[1];
     if (hash.startsWith("#rank-")) return "resumo";
+    if (TOUR && hash.startsWith("#race-")) return TOUR.id;
     return "cms";
   }
   $("#back").addEventListener("click", () => {
