@@ -1370,28 +1370,57 @@
     $("#pk-q").focus();
   }
 
+  // com affinity: da maior para a menor, com as versões da mesma personagem
+  // sempre juntas (a original primeiro); empates mantêm a ordem do jogo.
+  // Sem affinity: Umas do meta do JP primeiro, da mais para a menos usada
+  function withGroups(rows) {
+    const groups = new Map();
+    for (const r of rows) {
+      const g = groups.get(r.base);
+      if (g) g.max = Math.max(g.max, r.sc ?? 0);
+      else groups.set(r.base, { max: r.sc ?? 0, first: r.i });
+    }
+    for (const r of rows) r.group = groups.get(r.base);
+    return rows;
+  }
+  function byAffinityGrouped(a, b) {
+    const ga = a.group,
+      gb = b.group;
+    return (
+      gb.max - ga.max ||
+      ga.first - gb.first ||
+      (b.sc ?? 0) - (a.sc ?? 0) ||
+      (a.c.n === a.base ? 0 : 1) - (b.c.n === b.base ? 0 : 1) ||
+      a.i - b.i
+    );
+  }
+
   function renderPicker() {
     const q = pickerState.q.toLowerCase();
     const list = $("#pk-list");
     list.classList.toggle("cards", picker.kind === "card");
     const items =
       picker.kind === "char"
-        ? CAT.chars
-            .filter(
-              (c) =>
-                inPvp(c) &&
-                !(picker.blocked && picker.blocked.has(L.baseName(c.n))) &&
-                (!q || c.n.toLowerCase().includes(q)),
-            )
-            .map((c) => ({
-              c,
-              sc: picker.score ? picker.score(c.n) : null,
-              use: picker.umas.get(c.n),
-            }))
-            // com affinity: da maior para a menor (empates mantêm a ordem do jogo);
-            // Umas do meta do JP primeiro, da mais para a menos usada
-            .sort((a, b) =>
-              picker.score ? b.sc - a.sc : (b.use || 0) - (a.use || 0),
+        ? withGroups(
+            CAT.chars
+              .filter(
+                (c) =>
+                  inPvp(c) &&
+                  !(picker.blocked && picker.blocked.has(L.baseName(c.n))) &&
+                  (!q || c.n.toLowerCase().includes(q)),
+              )
+              .map((c, i) => ({
+                c,
+                i,
+                base: L.baseName(c.n),
+                sc: picker.score ? picker.score(c.n) : null,
+                use: picker.umas.get(c.n),
+              })),
+          )
+            .sort(
+              picker.score
+                ? byAffinityGrouped
+                : (a, b) => (b.use || 0) - (a.use || 0),
             )
             .map(
               ({ c, sc, use }) =>
