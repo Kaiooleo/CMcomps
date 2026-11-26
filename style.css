@@ -2592,3 +2592,10 @@ select[name="st"] option {
     text-align: left;
   }
 }
+
+/* opções que aparecem mas não podem ser escolhidas (ex.: parent igual à Uma) */
+#pk-list button.off {
+  cursor: not-allowed;
+  opacity: 0.4;
+  filter: grayscale(1);
+}

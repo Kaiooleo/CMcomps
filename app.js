@@ -1211,6 +1211,10 @@
           `${PAR[j]} · ${t.n || umaLabel(k)}`,
           (v) => change(() => (t.p[j] = v)),
           score,
+          // o parent não pode ser a mesma personagem da Uma (nem outra versão dela)
+          isParent && t.n
+            ? new Map([[L.baseName(t.n), "Same character as the Uma"]])
+            : null,
         );
       }),
     );
@@ -1334,8 +1338,15 @@
   let pickerBlocked = null; // campeonato: personagens que não podem correr (nome → motivo)
   const pickerState = { q: "", rarity: new Set(), type: new Set() };
 
-  function openPicker(kind, current, title, onPick, score = null) {
-    picker = { kind, onPick, score, umas: pickerUmas, blocked: pickerBlocked };
+  function openPicker(kind, current, title, onPick, score = null, off = null) {
+    picker = {
+      kind,
+      onPick,
+      score,
+      umas: pickerUmas,
+      blocked: pickerBlocked,
+      off, // personagens visíveis mas não selecionáveis (nome base → motivo)
+    };
     pickerState.q = "";
     $("#pk-q").value = "";
     $("#pk-title").textContent = title;
@@ -1422,10 +1433,10 @@
                 ? byAffinityGrouped
                 : (a, b) => (b.use || 0) - (a.use || 0),
             )
-            .map(
-              ({ c, sc, use }) =>
-                `<button type="button" data-v="${esc(c.n)}" class="${use ? "rec" : ""}"><span class="im">${charImg(c.n)}${sc != null ? `<b class="aff num" title="Affinity">${sc}</b>` : ""}${use ? `<b class="recb" title="Used by ${use}% of the JP top">Rec ${Math.round(use)}%</b>` : ""}</span><span>${esc(c.n)}</span></button>`,
-            )
+            .map(({ c, sc, use, base }) => {
+              const off = picker.off && picker.off.get(base);
+              return `<button type="button" data-v="${esc(c.n)}" class="${use ? "rec" : ""} ${off ? "off" : ""}" ${off ? `disabled title="${esc(off)}"` : ""}><span class="im">${charImg(c.n)}${sc != null && !off ? `<b class="aff num" title="Affinity">${sc}</b>` : ""}${use ? `<b class="recb" title="Used by ${use}% of the JP top">Rec ${Math.round(use)}%</b>` : ""}</span><span>${esc(c.n)}</span></button>`;
+            })
         : CAT.cards
             .filter(
               (c) =>
