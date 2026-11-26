@@ -1211,18 +1211,25 @@
           `${PAR[j]} · ${t.n || umaLabel(k)}`,
           (v) => change(() => (t.p[j] = v)),
           score,
-          // o parent não pode ser a mesma personagem da Uma nem do outro parent
-          // (nem outra versão delas), como no jogo
-          isParent
-            ? new Map(
-                [
+          // como no jogo (contando qualquer versão da personagem):
+          // parent ≠ Uma e ≠ outro parent; GP ≠ o parent dele e ≠ o outro GP do lado
+          new Map(
+            (isParent
+              ? [
                   [t.p[j === 0 ? 3 : 0], "Already used as the other parent"],
                   [t.n, "Same character as the Uma"],
                 ]
-                  .filter(([n]) => n)
-                  .map(([n, why]) => [L.baseName(n), why]),
-              )
-            : null,
+              : [
+                  [t.p[j < 3 ? 0 : 3], "Same character as its parent"],
+                  [
+                    t.p[j % 3 === 1 ? j + 1 : j - 1],
+                    "Already used as the other grandparent",
+                  ],
+                ]
+            )
+              .filter(([n]) => n)
+              .map(([n, why]) => [L.baseName(n), why]),
+          ),
         );
       }),
     );
