@@ -2657,18 +2657,13 @@ select[name="st"] option {
 }
 .rblist li {
   display: grid;
-  grid-template-columns: 8px minmax(0, 1fr) auto 3.2em 6.5em;
+  grid-template-columns: minmax(0, 1fr) auto 3.2em 6.5em;
   align-items: center;
   gap: 8px;
   padding: 4px 0;
 }
 .rblist li + li {
   border-top: 1px solid var(--line);
-}
-.rbdot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
 }
 .rbname {
   display: grid;
@@ -2693,10 +2688,10 @@ select[name="st"] option {
 }
 @media (max-width: 600px) {
   .rblist li {
-    grid-template-columns: 8px minmax(0, 1fr) auto 3em;
+    grid-template-columns: minmax(0, 1fr) auto 3em;
   }
   .rbmax {
-    grid-column: 2 / -1;
+    grid-column: 1 / -1;
     margin-top: -4px;
   }
   .rbmax:empty {

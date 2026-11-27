@@ -77,19 +77,19 @@
         const name = c ? c.n : key.split("\n")[0];
         const sub = [
           c && c.r,
-          c && c.t,
+          c && c.ty,
           j === L.BORROWED_SLOT ? "Borrowed" : "",
         ]
           .filter(Boolean)
           .join(" · ");
-        return `<li><span class="rbdot" style="background:${c ? typeVar(c.ty) : "var(--faint)"}"></span>
+        return `<li>
           <span class="rbname"><span>${esc(name)}</span><small>${esc(sub)}</small></span>
           <span class="rblb">${L.LB_LABELS[lb]}</span>
           <b class="num">${now == null ? "?" : now + "%"}</b>
           <small class="rbmax">${now != null && mlb > now ? `${mlb}% at MLB` : ""}</small></li>`;
       })
       .join("");
-    return `<ul class="rblist" id="rblist" ${rbOpen ? "" : "hidden"}>${rows}<li class="rbtotal"><span></span><span class="rbname">Total</span><span></span><b class="num">${r.total}%${r.unknown ? "+" : ""}</b><small></small></li></ul>`;
+    return `<ul class="rblist" id="rblist" ${rbOpen ? "" : "hidden"}>${rows}<li class="rbtotal"><span class="rbname">Total</span><span></span><b class="num">${r.total}%${r.unknown ? "+" : ""}</b><small></small></li></ul>`;
   }
   const META = window.CM_META || {};
   const META_CARD_MIN = 20; // % de uso no estilo para a carta virar "Rec" no seletor
