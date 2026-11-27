@@ -2698,3 +2698,150 @@ select[name="st"] option {
     display: none;
   }
 }
+
+/* ---------- Campeonato: outras opções por corrida ---------- */
+.tophead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.topt {
+  border-top: 1px solid var(--line);
+}
+.topt:first-of-type {
+  border-top: 0;
+}
+.toptrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+}
+.toptmain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.toptmain:hover {
+  background: var(--surface-2);
+}
+.toptmain .av {
+  width: 40px;
+  height: 40px;
+  flex: none;
+}
+.toptmain .tname {
+  flex: 1;
+}
+.toptmain .chev {
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg);
+  transition: transform 0.15s;
+}
+.topt.open .toptmain .chev {
+  transform: rotate(-135deg);
+}
+.tclash {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--loh) 16%, transparent);
+  color: var(--loh);
+  font-size: 11px;
+  font-weight: 700;
+}
+.topt .tourrun {
+  padding-bottom: 10px;
+}
+.topt .rmuma {
+  display: none;
+}
+.topts {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 10px;
+}
+.topts .av {
+  width: 24px;
+  height: 24px;
+  margin-left: -6px;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  overflow: hidden;
+}
+.topts .av:first-child {
+  margin-left: 0;
+}
+.topts small {
+  margin-left: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+.tplanwrap {
+  overflow-x: auto;
+}
+.tplan {
+  border-collapse: collapse;
+  font-size: 13px;
+  min-width: 100%;
+}
+.tplan th,
+.tplan td {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--line);
+  text-align: center;
+  white-space: nowrap;
+}
+.tplan thead th {
+  color: var(--muted);
+  font-size: 11px;
+}
+.tplan tbody th {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  font-weight: 600;
+}
+.tplan tbody th .av {
+  width: 24px;
+  height: 24px;
+}
+.tplan tbody th small {
+  color: var(--loh);
+  font-weight: 700;
+}
+.tplan .pp {
+  color: var(--accent);
+}
+.tplan .po {
+  color: var(--muted);
+}
+.tplan .po.bad {
+  color: var(--loh);
+}
+@media (max-width: 600px) {
+  .toptrow {
+    flex-wrap: wrap;
+  }
+  .toptmain {
+    flex-basis: 100%;
+  }
+}

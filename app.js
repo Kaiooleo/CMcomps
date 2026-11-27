@@ -303,7 +303,7 @@
         return `<a class="trace ${r.ph} ${next && next.id === r.id ? "next" : ""}" href="#race-${esc(r.id)}">
         <span class="tdate"><b class="num">${esc(r.date.slice(8))}</b><small>${esc(fmtShort(r.date).split(" ")[0])}</small></span>
         <span class="tinfo"><small class="label">${esc(r.label)}</small><b>${esc(r.nm)}</b><small>${esc(raceLine(r))}</small><small class="tcond">${esc(raceCond(r))}</small></span>
-        <span class="tuma">${t && t.n ? `<span class="av">${charImg(t.n, true)}</span><span class="tname"><span>${esc(t.n)}</span>${t.st ? `<small class="${stClass(t.st)}">${esc(t.st)}</small>` : '<small class="muted">No style</small>'}</span>` : '<span class="pick">Choose Uma</span>'}</span>
+        <span class="tuma">${t && t.n ? `<span class="av">${charImg(t.n, true)}</span><span class="tname"><span>${esc(t.n)}</span>${t.st ? `<small class="${stClass(t.st)}">${esc(t.st)}</small>` : '<small class="muted">No style</small>'}</span>` : '<span class="pick">Choose Uma</span>'}${optsMini(d)}</span>
         <span class="tres">${pos ? `<b class="num">${ordinal(pos)}</b><small>${esc(raceOutcome(r, pos))}</small>` : '<small class="muted">No result</small>'}</span>
       </a>`;
       })
@@ -336,11 +336,81 @@
     <div class="traces">${rows}</div>
     <p class="note">One Uma per race. A character used in a qualifier can't run again, in any version. The semifinal and the final are one phase: you can use the same Uma in both, but not one from the qualifiers.</p>
   </section>
+  ${plannerHtml()}
   <section class="panel">
     <div class="label">Characters used (${s.used.length})</div>
     <p class="tused">${s.used.length ? s.used.map(esc).join(" · ") : "None yet."}</p>
   </section>`;
   }
+
+  /* ---------- Campeonato: opções por corrida ---------- */
+  // opções = Umas guardadas depois da escolhida (team[1..]); só a escolhida (team[0]) conta como usada
+  const raceOpts = (d) =>
+    d
+      ? d.team.map((o, k) => ({ o, k })).filter(({ o, k }) => k > 0 && o.n)
+      : [];
+  function optsMini(d) {
+    const opts = raceOpts(d);
+    if (!opts.length) return "";
+    return `<span class="topts" title="Other options: ${esc(opts.map(({ o }) => o.n).join(", "))}">${opts
+      .slice(0, 3)
+      .map(({ o }) => `<span class="av">${charImg(o.n, true)}</span>`)
+      .join("")}<small>+${opts.length}</small></span>`;
+  }
+  // quadro: em quais corridas cada personagem foi escolhida (●) ou é opção (○)
+  function plannerHtml() {
+    const rows = new Map();
+    TOUR.races.forEach((r, ri) => {
+      const d = DATA[r.id];
+      if (!d) return;
+      d.team.forEach((o, k) => {
+        if (!o.n) return;
+        const b = L.baseName(o.n);
+        if (!rows.has(b)) rows.set(b, { n: o.n, cells: [] });
+        const row = rows.get(b);
+        row.cells[ri] = k === 0 ? "pick" : row.cells[ri] || "opt";
+      });
+    });
+    if (![...rows.values()].some((r) => r.cells.includes("opt"))) return "";
+    const list = [...rows.entries()].sort(
+      (a, b) =>
+        a[1].cells.findIndex(Boolean) - b[1].cells.findIndex(Boolean) ||
+        a[0].localeCompare(b[0]),
+    );
+    const head = TOUR.races
+      .map(
+        (r) =>
+          `<th title="${esc(r.nm)}">${esc(r.label.replace("Qualifier ", "Q").replace("Semifinal", "SF").replace("Grand Final", "F"))}</th>`,
+      )
+      .join("");
+    const body = list
+      .map(([b, row]) => {
+        const picks = TOUR.races.filter((r, i) => row.cells[i] === "pick");
+        // conflito: cogitada numa corrida, mas já escolhida em outra (semifinal e final podem repetir)
+        const clashAt = (r) =>
+          picks.some(
+            (p) => p.id !== r.id && !(p.ph === "final" && r.ph === "final"),
+          );
+        const clash = TOUR.races.some(
+          (r, i) => row.cells[i] === "opt" && clashAt(r),
+        );
+        const cells = TOUR.races
+          .map((r, i) => {
+            const c = row.cells[i];
+            return `<td>${c === "pick" ? '<span class="pp" title="Chosen">●</span>' : c === "opt" ? `<span class="po ${clashAt(r) ? "bad" : ""}" title="Option">○</span>` : ""}</td>`;
+          })
+          .join("");
+        return `<tr class="${clash ? "clash" : ""}"><th><span class="av">${charImg(row.n, true)}</span>${esc(b)}${clash ? ' <small title="Chosen in one race and still an option in another">conflict</small>' : ""}</th>${cells}</tr>`;
+      })
+      .join("");
+    return `<section class="panel">
+    <div class="label">Planner</div>
+    <div class="tplanwrap"><table class="tplan"><thead><tr><th></th>${head}</tr></thead><tbody>${body}</tbody></table></div>
+    <p class="note">● chosen · ○ option. A character chosen in one race can't run in another, so an option there is a conflict (the semifinal and the final can share).</p>
+  </section>`;
+  }
+  let optOpen = null; // opção aberta para editar (índice no time)
+  let optRace = null;
 
   function viewRace(id) {
     setNav("tour");
@@ -377,6 +447,7 @@
     <div class="nav2">${prev ? `<a class="btn" href="#race-${esc(prev.id)}">← ${esc(prev.label)}</a>` : ""}<a class="btn" href="#${esc(TOUR.id)}">All races</a>${nextR ? `<a class="btn" href="#race-${esc(nextR.id)}">${esc(nextR.label)} →</a>` : ""}</div>
   </section>
   <section class="tourrun">${runnerHtml(t, 0, true, 0)}</section>
+  ${optsHtml(id, d)}
   <section class="row2">
     <div class="panel"><div class="label">Result</div>
       <div class="places tplaces" role="group" aria-label="Place in this race">${places.map((n) => `<button type="button" data-pos="${n}" aria-pressed="${d.pos === n}">${ordinal(n)}</button>`).join("")}<button type="button" data-pos="" aria-pressed="${!d.pos}">No result</button></div>
@@ -389,6 +460,7 @@
     </div>
   </section>`;
     bindRunner(document.querySelector(".runner"), t, 0, () => viewRace(id), 0);
+    bindOpts(id, d);
     document.querySelectorAll("[data-pos]").forEach((b) =>
       b.addEventListener("click", () => {
         const v = parseInt(b.dataset.pos, 10);
@@ -397,6 +469,92 @@
         viewRace(id);
       }),
     );
+  }
+
+  function optsHtml(id, d) {
+    if (optRace !== id) {
+      optRace = id;
+      optOpen = null;
+    }
+    const chosenElsewhere = new Map(
+      [...L.tourneyBlocked(TOUR, DATA, id)].filter(
+        ([, why]) => why !== "Banned",
+      ),
+    );
+    const list = d.team
+      .map((o, k) => ({ o, k }))
+      .filter(({ o, k }) => k > 0 && (o.n || k === optOpen));
+    const rows = list
+      .map(({ o, k }) => {
+        const open = k === optOpen;
+        const rb = deckRb(o);
+        const clash = o.n && chosenElsewhere.get(L.baseName(o.n));
+        return `<div class="topt ${open ? "open" : ""}" data-ok="${k}">
+        <div class="toptrow">
+          <button type="button" class="toptmain" data-act="toggle" aria-expanded="${open}">
+            <span class="av">${o.n ? charImg(o.n, true) : ""}</span>
+            <span class="tname"><span>${o.n ? esc(o.n) : '<span class="pick">Choose Uma</span>'}</span><small class="${o.st ? stClass(o.st) : "muted"}">${esc(o.st || "No style")}${rb ? ` · RB ${rb.total}%` : ""}</small></span>
+            ${clash ? `<span class="tclash">${esc(clash.replace("Used in", "Chosen in"))}</span>` : ""}
+            <span class="chev" aria-hidden="true"></span>
+          </button>
+          <button type="button" class="btn" data-act="use" ${o.n && !clash ? "" : "disabled"} title="${clash ? "Already chosen in another race" : "Make this the Uma for this race"}">Use this one</button>
+          <button type="button" class="btn ghost" data-act="rm" aria-label="Remove option" title="Remove option">✕</button>
+        </div>
+        ${open ? `<div class="tourrun">${runnerHtml(o, k, true, 0)}</div>` : ""}
+      </div>`;
+      })
+      .join("");
+    return `<section class="panel topts-panel">
+    <div class="tophead"><div class="label">Other options (${list.filter(({ o }) => o.n).length})</div><button type="button" class="btn" id="add-opt" ${d.team.length >= L.MAX_TEAM ? "disabled" : ""}>+ Add option</button></div>
+    ${rows || '<p class="note">Undecided? Add other Umas you are considering for this race, each with its own parents and deck. Only the chosen one counts as used.</p>'}
+  </section>`;
+  }
+
+  // opções vazias no meio não ficam: as de depois sobem (o time tem sempre 3 posições)
+  function compactOpts(d) {
+    const rest = d.team.slice(1).filter((x) => !L.isEmptyUma(x));
+    d.team = [d.team[0], ...rest];
+    while (d.team.length < L.TEAM_SIZE) d.team.push(L.blankUma());
+  }
+
+  function bindOpts(id, d) {
+    const rerender = () => viewRace(id);
+    $("#add-opt").addEventListener("click", () => {
+      let k = d.team.findIndex((o, i) => i > 0 && L.isEmptyUma(o));
+      if (k < 0) {
+        d.team.push(L.blankUma());
+        k = d.team.length - 1;
+      }
+      optOpen = k;
+      rerender();
+      const row = document.querySelector(`[data-ok="${k}"]`);
+      if (row) row.scrollIntoView({ block: "nearest" });
+    });
+    document.querySelectorAll(".topt").forEach((el) => {
+      const k = +el.dataset.ok;
+      const o = d.team[k];
+      el.querySelector('[data-act="toggle"]').addEventListener("click", () => {
+        optOpen = optOpen === k ? null : k;
+        rerender();
+      });
+      el.querySelector('[data-act="use"]').addEventListener("click", () => {
+        [d.team[0], d.team[k]] = [d.team[k], d.team[0]];
+        compactOpts(d);
+        optOpen = null;
+        save();
+        rerender();
+      });
+      el.querySelector('[data-act="rm"]').addEventListener("click", () => {
+        if (o.n && !confirm(`Remove ${o.n} from the options?`)) return;
+        d.team[k] = L.blankUma();
+        compactOpts(d);
+        optOpen = null;
+        save();
+        rerender();
+      });
+      const card = el.querySelector(".runner");
+      if (card) bindRunner(card, o, k, rerender, 0);
+    });
   }
 
   /* ---------- Resumo ---------- */
@@ -750,7 +908,13 @@
     t.w != null && (t.r || total) ? pct(t.w / (t.r || total)) : "–";
   /** Rótulo da Uma k: 1–3 principais, depois "Extra 1", "Extra 2"… */
   const umaLabel = (k) =>
-    k < L.TEAM_SIZE ? `Uma ${k + 1}` : `Extra ${k - L.TEAM_SIZE + 1}`;
+    pickerPvp && pickerPvp.tour
+      ? k
+        ? "Option"
+        : "Uma"
+      : k < L.TEAM_SIZE
+        ? `Uma ${k + 1}`
+        : `Extra ${k - L.TEAM_SIZE + 1}`;
 
   function currentNote(id) {
     if (phase(id) !== "current") return "";
