@@ -2610,10 +2610,96 @@ select[name="st"] option {
 .deckhead .rb {
   text-transform: none;
   letter-spacing: 0;
-  font-size: 12px;
   font-weight: 600;
 }
 .deckhead .rb b {
   color: var(--fg);
   font-size: 13px;
+}
+
+/* botão do Race Bonus: abre a lista com o valor de cada carta */
+.deckhead .rb {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.deckhead .rb:hover,
+.deckhead .rb:focus-visible {
+  color: var(--accent);
+}
+.deckhead .rb .chev {
+  width: 7px;
+  height: 7px;
+  margin-left: 2px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 0.15s;
+}
+.deckhead .rb[aria-expanded="true"] .chev {
+  transform: translateY(1px) rotate(-135deg);
+}
+.rblist {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  font-size: 13px;
+}
+.rblist li {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto 3.2em 6.5em;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+.rblist li + li {
+  border-top: 1px solid var(--line);
+}
+.rbdot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.rbname {
+  display: grid;
+  min-width: 0;
+}
+.rbname > * {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.rbname small,
+.rblb,
+.rbmax {
+  color: var(--muted);
+  font-size: 11px;
+}
+.rblist b {
+  text-align: right;
+}
+.rbtotal {
+  font-weight: 700;
+}
+@media (max-width: 600px) {
+  .rblist li {
+    grid-template-columns: 8px minmax(0, 1fr) auto 3em;
+  }
+  .rbmax {
+    grid-column: 2 / -1;
+    margin-top: -4px;
+  }
+  .rbmax:empty {
+    display: none;
+  }
 }

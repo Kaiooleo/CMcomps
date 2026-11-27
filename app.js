@@ -59,7 +59,37 @@
     const tip = r.unknown
       ? `${r.unknown} card${r.unknown > 1 ? "s" : ""} without Race Bonus data`
       : "Sum of the Race Bonus of the 6 cards at their limit break";
-    return `<span class="rb" title="${tip}">Race Bonus <b class="num">${r.total}%${r.unknown ? "+" : ""}</b></span>`;
+    return `<button type="button" class="rb" aria-expanded="${rbOpen}" aria-controls="rblist" title="${tip}. Click for the breakdown">Race Bonus <b class="num">${r.total}%${r.unknown ? "+" : ""}</b><span class="chev" aria-hidden="true"></span></button>`;
+  }
+  // a lista detalhada fica aberta/fechada entre uma tela e outra
+  let rbOpen = false;
+  function rbListHtml(t) {
+    const r = deckRb(t);
+    if (!r) return "";
+    const rows = t.d
+      .map((key, j) => {
+        if (!key) return "";
+        const c = CARD_BY_KEY.get(key);
+        const v = c ? RACE_BONUS[c.id] : undefined;
+        const lb = t.lb[j] ?? 4;
+        const now = v == null ? null : Array.isArray(v) ? v[lb] : v;
+        const mlb = Array.isArray(v) ? v[4] : now;
+        const name = c ? c.n : key.split("\n")[0];
+        const sub = [
+          c && c.r,
+          c && c.t,
+          j === L.BORROWED_SLOT ? "Borrowed" : "",
+        ]
+          .filter(Boolean)
+          .join(" · ");
+        return `<li><span class="rbdot" style="background:${c ? typeVar(c.ty) : "var(--faint)"}"></span>
+          <span class="rbname"><span>${esc(name)}</span><small>${esc(sub)}</small></span>
+          <span class="rblb">${L.LB_LABELS[lb]}</span>
+          <b class="num">${now == null ? "?" : now + "%"}</b>
+          <small class="rbmax">${now != null && mlb > now ? `${mlb}% at MLB` : ""}</small></li>`;
+      })
+      .join("");
+    return `<ul class="rblist" id="rblist" ${rbOpen ? "" : "hidden"}>${rows}<li class="rbtotal"><span></span><span class="rbname">Total</span><span></span><b class="num">${r.total}%${r.unknown ? "+" : ""}</b><small></small></li></ul>`;
   }
   const META = window.CM_META || {};
   const META_CARD_MIN = 20; // % de uso no estilo para a carta virar "Rec" no seletor
@@ -1248,12 +1278,22 @@
         );
       }),
     );
+    card.addEventListener("click", (e) => {
+      const btn = e.target.closest(".rb");
+      if (!btn) return;
+      rbOpen = !rbOpen;
+      btn.setAttribute("aria-expanded", rbOpen);
+      const list = card.querySelector(".rblist");
+      if (list) list.hidden = !rbOpen;
+    });
     card.querySelectorAll("[data-lb]").forEach((sel) =>
       sel.addEventListener("change", () =>
         change(() => {
           t.lb[+sel.dataset.lb] = L.lbValue(sel.value);
           const rb = card.querySelector(".rb");
           if (rb) rb.outerHTML = rbHtml(t);
+          const list = card.querySelector(".rblist");
+          if (list) list.outerHTML = rbListHtml(t);
         }, false),
       ),
     );
@@ -1341,7 +1381,7 @@
           ${parent(0)}${parent(3)}
           ${parent(1)}${parent(2)}${parent(4)}${parent(5)}
         </div>${big ? affinityHtml(t) : ""}</div>
-      <div><div class="label deckhead"><span>Deck</span>${big ? rbHtml(t) : ""}</div><div class="deck">${deck}</div></div>
+      <div><div class="label deckhead"><span>Deck</span>${big ? rbHtml(t) : ""}</div><div class="deck">${deck}</div>${big ? rbListHtml(t) : ""}</div>
     </div>
   </article>`;
   }
