@@ -2700,97 +2700,67 @@ select[name="st"] option {
 }
 
 /* ---------- Campeonato: outras opções por corrida ---------- */
-.tophead {
+.toptbar {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-.topt {
-  border-top: 1px solid var(--line);
-}
-.topt:first-of-type {
-  border-top: 0;
-}
-.toptrow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 0;
-}
-.toptmain {
-  flex: 1;
-  min-width: 0;
-  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-  padding: 4px;
-  border: 0;
-  border-radius: 10px;
-  background: none;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
+  margin: 12px 0;
 }
-.toptmain:hover {
-  background: var(--surface-2);
+.toptbar small {
+  color: var(--muted);
 }
-.toptmain .av {
-  width: 40px;
-  height: 40px;
-  flex: none;
+.tcard.chosen {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
 }
-.toptmain .tname {
-  flex: 1;
+.chip.tpick {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: transparent;
 }
-.toptmain .chev {
-  width: 7px;
-  height: 7px;
-  margin-right: 6px;
-  border-right: 2px solid var(--muted);
-  border-bottom: 2px solid var(--muted);
-  transform: rotate(45deg);
-  transition: transform 0.15s;
-}
-.topt.open .toptmain .chev {
-  transform: rotate(-135deg);
+.chip.topt {
+  color: var(--muted);
 }
 .tclash {
-  flex: none;
-  padding: 2px 8px;
-  border-radius: 999px;
   background: color-mix(in oklab, var(--loh) 16%, transparent);
   color: var(--loh);
-  font-size: 11px;
+  border-color: transparent;
   font-weight: 700;
 }
-.topt .tourrun {
-  padding-bottom: 10px;
+.tpicktab {
+  font-weight: 700;
 }
-.topt .rmuma {
-  display: none;
-}
+/* lista de corridas: quantas opções a corrida tem */
 .topts {
   display: inline-flex;
   align-items: center;
-  margin-left: 10px;
+  justify-self: start;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 3px 10px 3px 4px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: var(--accent-soft);
+  white-space: nowrap;
+}
+.topts .avs {
+  display: inline-flex;
 }
 .topts .av {
-  width: 24px;
-  height: 24px;
-  margin-left: -6px;
+  width: 26px;
+  height: 26px;
+  margin-left: -8px;
   border: 2px solid var(--surface);
   border-radius: 50%;
   overflow: hidden;
+  background: var(--surface);
 }
 .topts .av:first-child {
   margin-left: 0;
 }
 .topts small {
-  margin-left: 4px;
-  color: var(--muted);
+  color: var(--accent);
   font-size: 11px;
   font-weight: 700;
 }
@@ -2836,12 +2806,4 @@ select[name="st"] option {
 }
 .tplan .po.bad {
   color: var(--loh);
-}
-@media (max-width: 600px) {
-  .toptrow {
-    flex-wrap: wrap;
-  }
-  .toptmain {
-    flex-basis: 100%;
-  }
 }

@@ -232,7 +232,7 @@
 
   /* ---------- navegação ---------- */
   function setNav(tab) {
-    $("#back").hidden = !/^#(cm|rank|uma|race)-/.test(location.hash);
+    $("#back").hidden = !/^#(cm|rank|uma|race|opt)-/.test(location.hash);
     for (const id of ["resumo", "cms", "tour"]) {
       const a = $("#nav-" + id);
       if (a) a.toggleAttribute("aria-current", id === tab);
@@ -249,6 +249,8 @@
     if (TOUR && h === TOUR.id) return viewTour();
     if (TOUR && h.startsWith("race-") && RACE_BY_ID.has(h.slice(5)))
       return viewRace(h.slice(5));
+    const opt = /^opt-(.+)-(\d)$/.exec(h);
+    if (TOUR && opt && RACE_BY_ID.has(opt[1])) return viewOpt(opt[1], +opt[2]);
     const rk = /^(rank-[a-z]+)(~loh)?$/.exec(h);
     if (rk && RANKINGS[rk[1]]) return viewRanking(rk[1], rk[2] ? "loh" : "cm");
     return viewResumo();
@@ -303,7 +305,7 @@
         return `<a class="trace ${r.ph} ${next && next.id === r.id ? "next" : ""}" href="#race-${esc(r.id)}">
         <span class="tdate"><b class="num">${esc(r.date.slice(8))}</b><small>${esc(fmtShort(r.date).split(" ")[0])}</small></span>
         <span class="tinfo"><small class="label">${esc(r.label)}</small><b>${esc(r.nm)}</b><small>${esc(raceLine(r))}</small><small class="tcond">${esc(raceCond(r))}</small></span>
-        <span class="tuma">${t && t.n ? `<span class="av">${charImg(t.n, true)}</span><span class="tname"><span>${esc(t.n)}</span>${t.st ? `<small class="${stClass(t.st)}">${esc(t.st)}</small>` : '<small class="muted">No style</small>'}</span>` : '<span class="pick">Choose Uma</span>'}${optsMini(d)}</span>
+        <span class="tuma">${t && t.n ? `<span class="av">${charImg(t.n, true)}</span><span class="tname"><span>${esc(t.n)}</span>${t.st ? `<small class="${stClass(t.st)}">${esc(t.st)}</small>` : '<small class="muted">No style</small>'}${optsMini(d)}</span>` : '<span class="pick">Choose Uma</span>'}</span>
         <span class="tres">${pos ? `<b class="num">${ordinal(pos)}</b><small>${esc(raceOutcome(r, pos))}</small>` : '<small class="muted">No result</small>'}</span>
       </a>`;
       })
@@ -349,13 +351,21 @@
     d
       ? d.team.map((o, k) => ({ o, k })).filter(({ o, k }) => k > 0 && o.n)
       : [];
+  // opções vazias no meio não ficam: as de depois sobem (o time tem sempre 3 posições)
+  function compactOpts(d) {
+    const rest = d.team.slice(1).filter((x) => !L.isEmptyUma(x));
+    d.team = [d.team[0], ...rest];
+    while (d.team.length < L.TEAM_SIZE) d.team.push(L.blankUma());
+  }
   function optsMini(d) {
     const opts = raceOpts(d);
     if (!opts.length) return "";
-    return `<span class="topts" title="Other options: ${esc(opts.map(({ o }) => o.n).join(", "))}">${opts
+    return `<span class="topts" title="Other options: ${esc(opts.map(({ o }) => o.n).join(", "))}"><span class="avs">${opts
       .slice(0, 3)
       .map(({ o }) => `<span class="av">${charImg(o.n, true)}</span>`)
-      .join("")}<small>+${opts.length}</small></span>`;
+      .join(
+        "",
+      )}</span><small>${opts.length} option${opts.length > 1 ? "s" : ""}</small></span>`;
   }
   // quadro: em quais corridas cada personagem foi escolhida (●) ou é opção (○)
   function plannerHtml() {
@@ -409,18 +419,10 @@
     <p class="note">● chosen · ○ option. A character chosen in one race can't run in another, so an option there is a conflict (the semifinal and the final can share).</p>
   </section>`;
   }
-  let optOpen = null; // opção aberta para editar (índice no time)
-  let optRace = null;
 
-  function viewRace(id) {
-    setNav("tour");
-    const r = RACE_BY_ID.get(id);
-    const d = record(id);
-    const t = d.team[0];
-    pickerPvpId = null;
-    pickerPvp = r;
-    runnerBlocked = L.tourneyBlocked(TOUR, DATA, id);
-    const i = TOUR.races.findIndex((x) => x.id === id);
+  /** Cabeçalho da página de uma corrida do campeonato (pista, condições, navegação). */
+  function raceHead(r, sub = "") {
+    const i = TOUR.races.findIndex((x) => x.id === r.id);
     const prev = TOUR.races[i - 1];
     const nextR = TOUR.races[i + 1];
     const meta = [
@@ -436,18 +438,139 @@
     ]
       .map((x) => `<span class="chip">${esc(x)}</span>`)
       .join("");
+    return `<section class="cmhead">
+    <div class="ttl"><div class="label">${esc(TOUR.name)} · ${esc(r.label)} · ${esc(fmtDate(r.date))}, 20:00</div><h1>${esc(r.nm)}${sub}</h1>${r.sub ? `<div class="label">${esc(r.sub)}</div>` : ""}</div>
+    <div class="meta">${meta}</div>
+    <div class="nav2">${prev ? `<a class="btn" href="#race-${esc(prev.id)}">← ${esc(prev.label)}</a>` : ""}<a class="btn" href="#${esc(TOUR.id)}">All races</a>${nextR ? `<a class="btn" href="#race-${esc(nextR.id)}">${esc(nextR.label)} →</a>` : ""}</div>
+  </section>`;
+  }
+
+  /** Personagens escolhidas em outras corridas (nome base → "Chosen in …"). */
+  const chosenElsewhere = (id) =>
+    new Map(
+      [...L.tourneyBlocked(TOUR, DATA, id)]
+        .filter(([, why]) => why !== "Banned")
+        .map(([n, why]) => [n, why.replace("Used in", "Chosen in")]),
+    );
+
+  /** Card resumido de uma opção, no estilo da página do CM; clicar abre a build. */
+  function tourCardHtml(id, t, k, clashes) {
+    const href = `#opt-${esc(id)}-${k}`;
+    if (!t.n)
+      return `<a class="panel umacard empty" href="${href}"><span class="plus">+</span><span>Choose Uma</span></a>`;
+    const mini = (items, img, borrowedAt = -1) =>
+      items
+        .map(
+          (x, j) =>
+            `<span class="m ${j === borrowedAt ? "borrow" : ""} ${x ? "" : "off"}">${x ? img(x) : ""}</span>`,
+        )
+        .join("");
+    const clash = clashes.get(L.baseName(t.n));
+    const rb = deckRb(t);
+    return `<a class="panel umacard tcard ${k === 0 ? "chosen" : ""}" href="${href}" title="Open ${esc(t.n)}">
+    <span class="art">${charImg(t.n, true)}</span>
+    <span class="info">
+      <b class="nm">${esc(t.n)}</b>
+      <span class="tags"><span class="chip ${k === 0 ? "tpick" : "topt"}">${k === 0 ? "Chosen" : "Option"}</span>${t.st ? `<span class="chip ${stClass(t.st)}">${esc(t.st)}</span>` : ""}${clash ? `<span class="chip tclash">${esc(clash)}</span>` : ""}</span>
+      <span class="wrbox"><span class="label">Race Bonus</span><b class="num">${rb ? rb.total + "%" : "–"}</b></span>
+    </span>
+    <span class="minis">
+      <span class="label">Parents</span>${parentsSummary(t.p)}
+      <span class="label">Deck</span><span class="mrow deckrow">${mini(t.d, cardImg, L.BORROWED_SLOT)}</span>
+    </span>
+  </a>`;
+  }
+
+  /** Página da build de uma opção (ou da escolhida), com abas entre elas. */
+  function viewOpt(id, k) {
+    setNav("tour");
+    const r = RACE_BY_ID.get(id);
+    const d = record(id);
+    const t = d.team[k];
+    if (
+      !t ||
+      (k > 0 && !raceOpts(d).some((x) => x.k === k) && !L.isEmptyUma(t))
+    ) {
+      location.replace("#race-" + id);
+      return;
+    }
+    pickerPvpId = null;
+    pickerPvp = r;
+    runnerBlocked = L.tourneyBlocked(TOUR, DATA, id);
+    const clash = t.n && chosenElsewhere(id).get(L.baseName(t.n));
+    const tabs = d.team
+      .map((u, j) => ({ u, j }))
+      .filter(({ u, j }) => j === 0 || u.n || j === k)
+      .map(
+        ({ u, j }) =>
+          `<a class="tog ${j ? "" : "tpicktab"}" href="#opt-${esc(id)}-${j}" aria-pressed="${j === k}">${j ? "" : "★ "}${u.n ? esc(u.n) : j ? "New option" : "Choose Uma"}</a>`,
+      )
+      .join("");
+    $("#app").innerHTML = `
+  ${raceHead(r, ` <span class="sub">· ${k ? "Option" : "Chosen"}</span>`)}
+  <nav class="seg umatabs" aria-label="Options for this race">${tabs}</nav>
+  ${
+    k
+      ? `<div class="toptbar"><button type="button" class="btn primary" id="use-opt" ${t.n && !clash ? "" : "disabled"}>Use this one</button><button type="button" class="btn danger" id="rm-opt">Remove option</button>${clash ? `<span class="chip tclash">${esc(clash)}</span>` : "<small>Makes this Uma the one for this race. The current one becomes an option.</small>"}</div>`
+      : ""
+  }
+  <section class="tourrun">${runnerHtml(t, k, true, 0)}</section>`;
+    bindRunner(
+      document.querySelector(".runner"),
+      t,
+      k,
+      () => viewOpt(id, k),
+      0,
+    );
+    const use = $("#use-opt");
+    if (use)
+      use.addEventListener("click", () => {
+        [d.team[0], d.team[k]] = [d.team[k], d.team[0]];
+        compactOpts(d);
+        save();
+        location.replace("#opt-" + id + "-0");
+      });
+    const rm = $("#rm-opt");
+    if (rm)
+      rm.addEventListener("click", () => {
+        if (t.n && !confirm(`Remove ${t.n} from the options?`)) return;
+        d.team[k] = L.blankUma();
+        compactOpts(d);
+        save();
+        location.replace("#race-" + id);
+      });
+    document.querySelectorAll(".umatabs a").forEach((tab) =>
+      tab.addEventListener("click", (e) => {
+        e.preventDefault();
+        location.replace(tab.getAttribute("href"));
+      }),
+    );
+  }
+
+  function viewRace(id) {
+    setNav("tour");
+    const r = RACE_BY_ID.get(id);
+    const d = record(id);
+    const t = d.team[0];
+    pickerPvpId = null;
+    pickerPvp = r;
+    runnerBlocked = L.tourneyBlocked(TOUR, DATA, id);
+    compactOpts(d);
+    const opts = raceOpts(d);
+    const clashes = chosenElsewhere(id);
     const places = Array.from({ length: 10 }, (_, n) => n + 1);
     const blockedList = [...runnerBlocked].filter(
       ([, why]) => why !== "Banned",
     );
     $("#app").innerHTML = `
-  <section class="cmhead">
-    <div class="ttl"><div class="label">${esc(TOUR.name)} · ${esc(r.label)} · ${esc(fmtDate(r.date))}, 20:00</div><h1>${esc(r.nm)}</h1>${r.sub ? `<div class="label">${esc(r.sub)}</div>` : ""}</div>
-    <div class="meta">${meta}</div>
-    <div class="nav2">${prev ? `<a class="btn" href="#race-${esc(prev.id)}">← ${esc(prev.label)}</a>` : ""}<a class="btn" href="#${esc(TOUR.id)}">All races</a>${nextR ? `<a class="btn" href="#race-${esc(nextR.id)}">${esc(nextR.label)} →</a>` : ""}</div>
-  </section>
-  <section class="tourrun">${runnerHtml(t, 0, true, 0)}</section>
-  ${optsHtml(id, d)}
+  ${raceHead(r)}
+  ${
+    opts.length
+      ? `<section class="umacards tcards">${[{ o: t, k: 0 }, ...opts].map(({ o, k }) => tourCardHtml(id, o, k, clashes)).join("")}</section>
+  <div class="toptbar"><button type="button" class="btn" id="add-opt" ${d.team.length >= L.MAX_TEAM ? "disabled" : ""}>+ Add option</button><small>Click an Uma to edit its build. Only the chosen one counts as used.</small></div>`
+      : `<section class="tourrun">${runnerHtml(t, 0, true, 0)}</section>
+  <div class="toptbar"><button type="button" class="btn" id="add-opt">+ Add option</button><small>Undecided? Add other Umas you are considering for this race, each with its own build.</small></div>`
+  }
   <section class="row2">
     <div class="panel"><div class="label">Result</div>
       <div class="places tplaces" role="group" aria-label="Place in this race">${places.map((n) => `<button type="button" data-pos="${n}" aria-pressed="${d.pos === n}">${ordinal(n)}</button>`).join("")}<button type="button" data-pos="" aria-pressed="${!d.pos}">No result</button></div>
@@ -459,8 +582,16 @@
       <p class="note">The picker only shows Umas and cards released on Global by ${esc(fmtDate(r.date))}. Upcoming banners use estimated dates.</p>
     </div>
   </section>`;
-    bindRunner(document.querySelector(".runner"), t, 0, () => viewRace(id), 0);
-    bindOpts(id, d);
+    const one = document.querySelector(".tourrun .runner");
+    if (one) bindRunner(one, t, 0, () => viewRace(id), 0);
+    $("#add-opt").addEventListener("click", () => {
+      let k = d.team.findIndex((o, i) => i > 0 && L.isEmptyUma(o));
+      if (k < 0) {
+        d.team.push(L.blankUma());
+        k = d.team.length - 1;
+      }
+      location.hash = `opt-${id}-${k}`;
+    });
     document.querySelectorAll("[data-pos]").forEach((b) =>
       b.addEventListener("click", () => {
         const v = parseInt(b.dataset.pos, 10);
@@ -469,92 +600,6 @@
         viewRace(id);
       }),
     );
-  }
-
-  function optsHtml(id, d) {
-    if (optRace !== id) {
-      optRace = id;
-      optOpen = null;
-    }
-    const chosenElsewhere = new Map(
-      [...L.tourneyBlocked(TOUR, DATA, id)].filter(
-        ([, why]) => why !== "Banned",
-      ),
-    );
-    const list = d.team
-      .map((o, k) => ({ o, k }))
-      .filter(({ o, k }) => k > 0 && (o.n || k === optOpen));
-    const rows = list
-      .map(({ o, k }) => {
-        const open = k === optOpen;
-        const rb = deckRb(o);
-        const clash = o.n && chosenElsewhere.get(L.baseName(o.n));
-        return `<div class="topt ${open ? "open" : ""}" data-ok="${k}">
-        <div class="toptrow">
-          <button type="button" class="toptmain" data-act="toggle" aria-expanded="${open}">
-            <span class="av">${o.n ? charImg(o.n, true) : ""}</span>
-            <span class="tname"><span>${o.n ? esc(o.n) : '<span class="pick">Choose Uma</span>'}</span><small class="${o.st ? stClass(o.st) : "muted"}">${esc(o.st || "No style")}${rb ? ` · RB ${rb.total}%` : ""}</small></span>
-            ${clash ? `<span class="tclash">${esc(clash.replace("Used in", "Chosen in"))}</span>` : ""}
-            <span class="chev" aria-hidden="true"></span>
-          </button>
-          <button type="button" class="btn" data-act="use" ${o.n && !clash ? "" : "disabled"} title="${clash ? "Already chosen in another race" : "Make this the Uma for this race"}">Use this one</button>
-          <button type="button" class="btn ghost" data-act="rm" aria-label="Remove option" title="Remove option">✕</button>
-        </div>
-        ${open ? `<div class="tourrun">${runnerHtml(o, k, true, 0)}</div>` : ""}
-      </div>`;
-      })
-      .join("");
-    return `<section class="panel topts-panel">
-    <div class="tophead"><div class="label">Other options (${list.filter(({ o }) => o.n).length})</div><button type="button" class="btn" id="add-opt" ${d.team.length >= L.MAX_TEAM ? "disabled" : ""}>+ Add option</button></div>
-    ${rows || '<p class="note">Undecided? Add other Umas you are considering for this race, each with its own parents and deck. Only the chosen one counts as used.</p>'}
-  </section>`;
-  }
-
-  // opções vazias no meio não ficam: as de depois sobem (o time tem sempre 3 posições)
-  function compactOpts(d) {
-    const rest = d.team.slice(1).filter((x) => !L.isEmptyUma(x));
-    d.team = [d.team[0], ...rest];
-    while (d.team.length < L.TEAM_SIZE) d.team.push(L.blankUma());
-  }
-
-  function bindOpts(id, d) {
-    const rerender = () => viewRace(id);
-    $("#add-opt").addEventListener("click", () => {
-      let k = d.team.findIndex((o, i) => i > 0 && L.isEmptyUma(o));
-      if (k < 0) {
-        d.team.push(L.blankUma());
-        k = d.team.length - 1;
-      }
-      optOpen = k;
-      rerender();
-      const row = document.querySelector(`[data-ok="${k}"]`);
-      if (row) row.scrollIntoView({ block: "nearest" });
-    });
-    document.querySelectorAll(".topt").forEach((el) => {
-      const k = +el.dataset.ok;
-      const o = d.team[k];
-      el.querySelector('[data-act="toggle"]').addEventListener("click", () => {
-        optOpen = optOpen === k ? null : k;
-        rerender();
-      });
-      el.querySelector('[data-act="use"]').addEventListener("click", () => {
-        [d.team[0], d.team[k]] = [d.team[k], d.team[0]];
-        compactOpts(d);
-        optOpen = null;
-        save();
-        rerender();
-      });
-      el.querySelector('[data-act="rm"]').addEventListener("click", () => {
-        if (o.n && !confirm(`Remove ${o.n} from the options?`)) return;
-        d.team[k] = L.blankUma();
-        compactOpts(d);
-        optOpen = null;
-        save();
-        rerender();
-      });
-      const card = el.querySelector(".runner");
-      if (card) bindRunner(card, o, k, rerender, 0);
-    });
   }
 
   /* ---------- Resumo ---------- */
@@ -2526,6 +2571,8 @@
     const uma = /^#uma-(.+)-\d$/.exec(hash);
     if (uma) return "cm-" + uma[1];
     if (hash.startsWith("#rank-")) return "resumo";
+    const opt = /^#opt-(.+)-\d$/.exec(hash);
+    if (TOUR && opt) return "race-" + opt[1];
     if (TOUR && hash.startsWith("#race-")) return TOUR.id;
     return "cms";
   }
