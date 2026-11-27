@@ -64,7 +64,14 @@ const rules = {
 
 module.exports = [
   {
-    ignores: ["data.js", "meta.js", "theme.js", "affinity.js", "node_modules/"],
+    ignores: [
+      "data.js",
+      "meta.js",
+      "theme.js",
+      "affinity.js",
+      "racebonus.js",
+      "node_modules/",
+    ],
   },
   {
     files: ["app.js", "logic.js"],

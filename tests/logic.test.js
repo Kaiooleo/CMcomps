@@ -617,3 +617,17 @@ test("campeonato: banidas, sem repetir personagem (semi e final podem repetir) e
   assert.equal(s.done, 2);
   assert.deepEqual(s.used, ["Daiwa Scarlet", "Gold Ship", "Seiun Sky"]);
 });
+
+test("race bonus do deck: soma por LB, carta sem LB conta como MLB, cartas sem dado", () => {
+  const rb = { A: [5, 6, 7, 8, 10], B: 5, C: [1, 2, 3, 5, 5] };
+  const d = ["A", "B", "C", null, "X", "A"];
+  const lb = [0, 2, null, null, 4, 4];
+  assert.deepEqual(
+    L.deckRaceBonus(d, lb, (k) => rb[k]),
+    { total: 5 + 5 + 5 + 10, unknown: 1 },
+  );
+  assert.equal(
+    L.deckRaceBonus(Array(6).fill(null), Array(6).fill(null), () => 0),
+    null,
+  );
+});

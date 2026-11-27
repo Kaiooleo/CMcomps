@@ -402,6 +402,26 @@
     return n >= 0 && n <= 4 ? n : null;
   }
 
+  /**
+   * Race Bonus total do deck (soma das 6 cartas, contando a emprestada).
+   * rbOf(chave da carta) → valor fixo, [LB0..MLB] ou undefined (sem dado).
+   * Carta sem LB marcado conta como MLB, como no seletor.
+   * Devolve { total, unknown } (unknown = cartas sem dado), ou null sem cartas.
+   */
+  function deckRaceBonus(d, lb, rbOf) {
+    let total = 0,
+      unknown = 0,
+      cards = 0;
+    d.forEach((key, j) => {
+      if (!key) return;
+      cards++;
+      const v = rbOf(key);
+      if (v == null) unknown++;
+      else total += Array.isArray(v) ? v[lb[j] ?? 4] : v;
+    });
+    return cards ? { total, unknown } : null;
+  }
+
   /** Garante que um PvP salvo tenha sempre 3 Umas, 6 pais, 6 cartas (com limit break) e 4 dias de round, com tipos corretos. */
   function normalizeRecord(r) {
     const base = blankRecord();
@@ -734,6 +754,7 @@
     WINS_TOTAL,
     LB_LABELS,
     lbValue,
+    deckRaceBonus,
     MARGIN_DAYS,
     CADENCE_DAYS,
     addDays,

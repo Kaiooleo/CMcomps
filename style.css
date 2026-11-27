@@ -2599,3 +2599,21 @@ select[name="st"] option {
   opacity: 0.4;
   filter: grayscale(1);
 }
+
+/* Race Bonus total do deck, ao lado do título "Deck" */
+.deckhead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.deckhead .rb {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+.deckhead .rb b {
+  color: var(--fg);
+  font-size: 13px;
+}

@@ -19,6 +19,7 @@ const CORE = [
   "data.js",
   "theme.js",
   "affinity.js",
+  "racebonus.js",
   "meta.js",
   "logic.js",
   "app.js",

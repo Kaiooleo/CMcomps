@@ -46,6 +46,21 @@
   const CHAR = new Map(CAT.chars.map((c) => [c.n, c]));
   const CARD = new Map(CAT.cards.map((c) => [c.k, c]));
   const CARD_BY_ID = new Map(CAT.cards.map((c) => [String(c.id), c]));
+  const CARD_BY_KEY = new Map(CAT.cards.map((c) => [c.k, c]));
+  const RACE_BONUS = window.CM_RACE_BONUS || {};
+  const deckRb = (t) =>
+    L.deckRaceBonus(t.d, t.lb, (key) => {
+      const c = CARD_BY_KEY.get(key);
+      return c ? RACE_BONUS[c.id] : undefined;
+    });
+  function rbHtml(t) {
+    const r = deckRb(t);
+    if (!r) return "";
+    const tip = r.unknown
+      ? `${r.unknown} card${r.unknown > 1 ? "s" : ""} without Race Bonus data`
+      : "Sum of the Race Bonus of the 6 cards at their limit break";
+    return `<span class="rb" title="${tip}">Race Bonus <b class="num">${r.total}%${r.unknown ? "+" : ""}</b></span>`;
+  }
   const META = window.CM_META || {};
   const META_CARD_MIN = 20; // % de uso no estilo para a carta virar "Rec" no seletor
   const META_UMA_MIN = 5; // % de uso no top para a Uma virar "Rec" no seletor
@@ -1233,13 +1248,15 @@
         );
       }),
     );
-    card
-      .querySelectorAll("[data-lb]")
-      .forEach((sel) =>
-        sel.addEventListener("change", () =>
-          change(() => (t.lb[+sel.dataset.lb] = L.lbValue(sel.value)), false),
-        ),
-      );
+    card.querySelectorAll("[data-lb]").forEach((sel) =>
+      sel.addEventListener("change", () =>
+        change(() => {
+          t.lb[+sel.dataset.lb] = L.lbValue(sel.value);
+          const rb = card.querySelector(".rb");
+          if (rb) rb.outerHTML = rbHtml(t);
+        }, false),
+      ),
+    );
     card.querySelectorAll("[data-d]").forEach((b) =>
       b.addEventListener("click", () => {
         const j = +b.dataset.d;
@@ -1324,7 +1341,7 @@
           ${parent(0)}${parent(3)}
           ${parent(1)}${parent(2)}${parent(4)}${parent(5)}
         </div>${big ? affinityHtml(t) : ""}</div>
-      <div><div class="label">Deck</div><div class="deck">${deck}</div></div>
+      <div><div class="label deckhead"><span>Deck</span>${big ? rbHtml(t) : ""}</div><div class="deck">${deck}</div></div>
     </div>
   </article>`;
   }
